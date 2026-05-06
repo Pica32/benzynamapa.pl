@@ -1,0 +1,10 @@
+node_modules/
+.next/
+web/out/
+*.env
+.env.local
+heslo.md
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store

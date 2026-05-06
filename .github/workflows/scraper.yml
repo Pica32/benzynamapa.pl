@@ -1,0 +1,35 @@
+name: Scraper – ceny paliw PL
+
+on:
+  schedule:
+    - cron: '0 4 * * *'   # 06:00 CET
+    - cron: '0 8 * * *'   # 10:00 CET
+    - cron: '0 13 * * *'  # 15:00 CET
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r scraper/requirements.txt
+
+      - name: Run scraper
+        run: python scraper/build_osm_data.py
+
+      - name: Commit updated data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add web/public/data/
+          git add scraper/history_pl.json || true
+          git add scraper/gps_cache_pl.json || true
+          git diff --staged --quiet || git commit -m "data: aktualizacja cen paliw $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push
