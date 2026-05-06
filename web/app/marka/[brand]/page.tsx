@@ -5,7 +5,6 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
 export const revalidate = 21600;
-export const dynamicParams = false;
 
 export async function generateStaticParams() {
   return BRAND_PAGES.map(b => ({ brand: b.slug }));

@@ -2,8 +2,6 @@ import type { MetadataRoute } from 'next';
 import { getStations } from '@/lib/data';
 import { CITIES, BRAND_PAGES } from '@/types';
 
-export const dynamic = 'force-static';
-
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = 'https://benzynamapa.pl';
 

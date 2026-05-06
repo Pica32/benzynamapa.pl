@@ -5,15 +5,12 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
 export const revalidate = 21600;
-export const dynamicParams = false;
 
 export async function generateStaticParams() {
   try {
-    const stations = getStations();
-    if (!stations.length) return [{ id: '__placeholder__' }];
-    return stations.map(s => ({ id: s.id }));
+    return getStations().map(s => ({ id: s.id }));
   } catch {
-    return [{ id: '__placeholder__' }];
+    return [];
   }
 }
 
