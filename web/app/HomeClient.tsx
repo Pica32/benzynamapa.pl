@@ -48,7 +48,8 @@ export default function HomeClient({ stats }: HomeClientProps) {
               pb98: p.n98 ?? null,
               on: p.on ?? null,
               lpg: p.lpg ?? null,
-              source: p.src,
+              // src: 'r'=cenapaliw.pl, 'e'=estimate (zkrácený formát)
+              source: p.src === 'r' ? 'cenapaliw.pl' : 'estimate',
               reported_at: p.at ?? '',
             } : null,
           };

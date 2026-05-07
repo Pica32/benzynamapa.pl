@@ -519,31 +519,60 @@ def compute_stats(prices_list: list, stations_list: list, now_iso: str) -> dict:
 
 
 def build_map_data(stations: list, prices_list: list) -> dict:
-    """Komprimovaný formát pro mapu — minimální JSON payload."""
+    """
+    Ultra-komprimovaný formát pro mapu.
+
+    Optimalizace oproti naivnímu JSON:
+    - Vynechají se null hodnoty v p (n98, lpg)
+    - Estimates nemají 'at' timestamp (zbytečné, vždy stale)
+    - region se vynechá (v PL OSM datech skoro vždy prázdné)
+    - opening_hours se vynechá pokud prázdné
+    - services se vynechá pokud prázdné
+    - src zkráceno: 'cenapaliw.pl' → 'r', 'estimate' → 'e'
+    - lat/lng 5 des. míst (přesnost 1 m)
+    - 'at' jen datum+čas bez timezone (zkrátí ~6 znaků na záznam)
+
+    Cíl: ~1.0-1.2 MB místo 2.6 MB (úspora ~55%)
+    """
     price_map = {p['station_id']: p for p in prices_list}
     result = []
+
     for s in stations:
         p = price_map.get(s['id'])
-        # Zkrácené klíče pro menší JSON
+
         entry = {
             'id': s['id'],
             'name': s['name'],
             'brand': s['brand'],
-            'lat': round(s['lat'], 5),   # 5 des. míst = přesnost 1m, šetří místo
+            'lat': round(s['lat'], 5),
             'lng': round(s['lng'], 5),
-            'address': s['address'],
-            'city': s['city'],
-            'region': s['region'],
-            'services': s['services'],
-            'opening_hours': s['opening_hours'],
         }
+
+        # Vynech prázdné řetězce — šetří místo
+        if s.get('address'): entry['address'] = s['address']
+        if s.get('city'):    entry['city']    = s['city']
+        if s.get('services'): entry['services'] = s['services']
+        if s.get('opening_hours'): entry['opening_hours'] = s['opening_hours']
+
         if p:
-            entry['p'] = {
-                'n95': p['pb95'], 'n98': p['pb98'],
-                'on': p['on'],    'lpg': p['lpg'],
-                'src': p['source'], 'at': p['reported_at'],
-            }
+            src_short = 'r' if p['source'] == 'cenapaliw.pl' else 'e'
+            price_entry: dict = {'src': src_short}
+
+            # Vynech null hodnoty
+            if p.get('pb95') is not None: price_entry['n95'] = p['pb95']
+            if p.get('on')   is not None: price_entry['on']  = p['on']
+            if p.get('lpg')  is not None: price_entry['lpg'] = p['lpg']
+            if p.get('pb98') is not None: price_entry['n98'] = p['pb98']
+
+            # Timestamp jen pro reálné ceny (odhady jsou vždy 'stale')
+            if src_short == 'r' and p.get('reported_at'):
+                # Zkrátit: '2026-05-07T05:56:05+00:00' → '2026-05-07T05:56'
+                price_entry['at'] = p['reported_at'][:16]
+
+            entry['p'] = price_entry
+
         result.append(entry)
+
     return {'stations': result}
 
 
