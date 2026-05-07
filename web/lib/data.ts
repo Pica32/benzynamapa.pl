@@ -91,18 +91,37 @@ function adaptiveMin(prices: number[], preferred: number): number {
 
 export function getCheapestStations(fuelType: FuelType, limit = 10): StationWithPrice[] {
   const cutoff = Date.now() - TWO_DAYS_MS;
-  const allWithPrices = getStationsWithPrices().filter(s =>
-    s.price?.[fuelType] != null &&
+  const all = getStationsWithPrices().filter(s => s.price?.[fuelType] != null);
+
+  // Reálné ceny (cenapaliw.pl) — zobrazit prioritně
+  const real = all.filter(s =>
     s.price?.source === 'cenapaliw.pl' &&
     new Date(s.price.reported_at).getTime() > cutoff
   );
-  const allPrices = allWithPrices.map(s => s.price![fuelType] as number);
-  const min = adaptiveMin(allPrices, PRICE_MIN[fuelType]);
 
-  return allWithPrices
-    .filter(s => (s.price![fuelType] as number) >= min)
-    .sort((a, b) => (a.price![fuelType] ?? 999) - (b.price![fuelType] ?? 999))
-    .slice(0, limit);
+  // Pokud máme dost reálných, vrátíme jen ty
+  if (real.length >= limit) {
+    const prices = real.map(s => s.price![fuelType] as number);
+    const min = adaptiveMin(prices, PRICE_MIN[fuelType]);
+    return real
+      .filter(s => (s.price![fuelType] as number) >= min)
+      .sort((a, b) => (a.price![fuelType] ?? 999) - (b.price![fuelType] ?? 999))
+      .slice(0, limit);
+  }
+
+  // Doplníme odhadovanými cenami (estimate) aby byl seznam vždy plný
+  const realIds = new Set(real.map(s => s.id));
+  const estimates = all
+    .filter(s => !realIds.has(s.id) && s.price?.source === 'estimate')
+    .filter(s => (s.price![fuelType] as number) >= PRICE_MIN[fuelType])
+    .sort((a, b) => (a.price![fuelType] ?? 999) - (b.price![fuelType] ?? 999));
+
+  const combined = [
+    ...real.sort((a, b) => (a.price![fuelType] ?? 999) - (b.price![fuelType] ?? 999)),
+    ...estimates,
+  ];
+
+  return combined.slice(0, limit);
 }
 
 export function slugify(text: string): string {

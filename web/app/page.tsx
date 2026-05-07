@@ -66,7 +66,7 @@ export default async function HomePage() {
         </div>
       </div>
 
-      <Top4Cheapest stations={cheapestBenzyna.concat(cheapestDiesel)} />
+      <Top4Cheapest stationsOn={cheapestDiesel.slice(0,4)} stationsPb95={cheapestBenzyna.slice(0,4)} />
 
       <HomeClient stats={stats} />
 

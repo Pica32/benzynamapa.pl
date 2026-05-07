@@ -1,43 +1,84 @@
-import { StationWithPrice, FuelType } from '@/types';
+import { StationWithPrice } from '@/types';
+import { formatPrice } from '@/lib/data';
 import Link from 'next/link';
+import { TrendingDown, MapPin } from 'lucide-react';
 
-const SECTIONS: { fuel: FuelType; label: string; color: string }[] = [
-  { fuel: 'pb95', label: 'Benzyna 95', color: 'bg-green-600' },
-  { fuel: 'on', label: 'Diesel', color: 'bg-gray-700' },
-  { fuel: 'lpg', label: 'LPG', color: 'bg-purple-600' },
-  { fuel: 'pb98', label: 'Benzyna 98', color: 'bg-blue-600' },
+interface Props {
+  stationsOn: StationWithPrice[];
+  stationsPb95: StationWithPrice[];
+}
+
+const MEDAL_COLORS = [
+  'bg-yellow-400 text-yellow-900',
+  'bg-gray-300 text-gray-700',
+  'bg-amber-600 text-amber-100',
+  'bg-green-100 text-green-800',
 ];
 
-export default function Top4Cheapest({ stations }: { stations: StationWithPrice[] }) {
+function StationRow({ s, i, fuel }: { s: StationWithPrice; i: number; fuel: 'on' | 'pb95' }) {
+  const price = s.price?.[fuel];
+  const isReal = s.price?.source === 'cenapaliw.pl';
   return (
-    <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-      <div className="max-w-7xl mx-auto px-4 py-3">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {SECTIONS.map(({ fuel, label, color }) => {
-            const best = stations
-              .filter(s => s.price?.[fuel] != null)
-              .sort((a, b) => (a.price![fuel] ?? 999) - (b.price![fuel] ?? 999))[0];
-            if (!best) return null;
-            return (
-              <Link
-                key={fuel}
-                href={`/stacja/${best.id}/`}
-                className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-green-400 hover:bg-green-50 dark:hover:bg-gray-700 transition-all group"
-              >
-                <div className={`${color} text-white rounded-lg px-2 py-1 text-xs font-black whitespace-nowrap`}>
-                  {best.price![fuel]!.toFixed(2).replace('.', ',')} zł
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">{label}</div>
-                  <div className="text-xs text-gray-700 dark:text-gray-300 truncate group-hover:text-green-700 dark:group-hover:text-green-400">
-                    {best.city}
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
+    <Link
+      href={`/stacja/${s.id}/`}
+      className="flex items-center gap-3 bg-white/10 hover:bg-white/20 rounded-xl px-4 py-2.5 transition-colors group"
+    >
+      <span className={`w-6 h-6 rounded-full text-xs font-black flex items-center justify-center flex-shrink-0 ${MEDAL_COLORS[i]}`}>
+        {i + 1}
+      </span>
+      <div className="flex-1 min-w-0">
+        <div className="font-semibold text-white text-sm truncate group-hover:text-green-300 transition-colors">
+          {s.name}
+        </div>
+        <div className="flex items-center gap-1 text-green-300 text-xs">
+          <MapPin size={10} />
+          {s.city}
         </div>
       </div>
-    </div>
+      <div className="text-right flex-shrink-0">
+        <span className={`font-black text-xl tabular-nums ${i === 0 ? 'text-yellow-300' : 'text-white'}`}>
+          {price != null ? price.toFixed(2).replace('.', ',') : '—'}
+          <span className="text-xs font-normal text-green-300 ml-0.5">zł</span>
+        </span>
+        <div className={`text-[9px] text-right ${isReal ? 'text-green-400' : 'text-green-700'}`}>
+          {isReal ? '✓ zweryfikowane' : '~ szacunek'}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+export default function Top4Cheapest({ stationsOn, stationsPb95 }: Props) {
+  const top4on   = stationsOn.slice(0, 4);
+  const top4pb95 = stationsPb95.slice(0, 4);
+
+  if (!top4on.length && !top4pb95.length) return null;
+
+  return (
+    <section className="bg-gradient-to-r from-green-900 via-green-800 to-emerald-900 text-white">
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="flex items-center gap-2 mb-4">
+          <TrendingDown size={20} className="text-green-300" />
+          <h2 className="text-white font-bold text-lg">Najtańsze stacje paliw w Polsce – dziś</h2>
+          <span className="ml-auto text-green-300 text-xs">Aktualizacja 3× dziennie</span>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-6">
+          <div>
+            <p className="text-green-300 text-xs font-semibold uppercase tracking-widest mb-2">Diesel (olej napędowy)</p>
+            <div className="space-y-2">
+              {top4on.map((s, i) => <StationRow key={s.id} s={s} i={i} fuel="on" />)}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-green-300 text-xs font-semibold uppercase tracking-widest mb-2">Benzyna 95 (PB95)</p>
+            <div className="space-y-2">
+              {top4pb95.map((s, i) => <StationRow key={s.id} s={s} i={i} fuel="pb95" />)}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
