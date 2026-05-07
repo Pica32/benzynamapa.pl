@@ -96,7 +96,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="dns-prefetch" href="https://ip-api.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
 
-        {/* JSON-LD */}
+        {/* llms.txt — pro AI asistenty */}
+        <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs guide" />
+
+        {/* JSON-LD — WebSite */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -104,17 +107,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               '@context': 'https://schema.org',
               '@type': 'WebSite',
               name: 'BenzynaMAPA',
+              alternateName: 'BenzynaMAPA.pl',
               url: 'https://benzynamapa.pl',
-              description: 'Aktualne ceny paliw w Polsce – mapa stacji, porównanie cen',
+              description: 'Aktualne ceny paliw w Polsce – mapa stacji, porównanie cen benzyny, diesla i LPG',
               inLanguage: 'pl',
               potentialAction: {
                 '@type': 'SearchAction',
-                target: 'https://benzynamapa.pl/?q={search_term_string}',
+                target: { '@type': 'EntryPoint', urlTemplate: 'https://benzynamapa.pl/?q={search_term_string}' },
                 'query-input': 'required name=search_term_string',
               },
             }),
           }}
         />
+        {/* JSON-LD — Organization */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -125,11 +130,36 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               url: 'https://benzynamapa.pl',
               logo: {
                 '@type': 'ImageObject',
-                url: 'https://benzynamapa.pl/icon-512.svg',
+                url: 'https://benzynamapa.pl/icon-512.png',
                 width: 512,
                 height: 512,
               },
-              sameAs: ['https://benzinmapa.cz'],
+              sameAs: [
+                'https://benzinmapa.cz',
+                'https://github.com/Pica32/benzynamapa.pl',
+              ],
+              contactPoint: {
+                '@type': 'ContactPoint',
+                contactType: 'customer service',
+                email: 'kontakt@benzynamapa.pl',
+                availableLanguage: 'Polish',
+              },
+            }),
+          }}
+        />
+        {/* JSON-LD — LocalBusiness (fuel price aggregator) */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Service',
+              name: 'BenzynaMAPA – porównywarka cen paliw',
+              serviceType: 'Fuel Price Comparison',
+              provider: { '@type': 'Organization', name: 'BenzynaMAPA', url: 'https://benzynamapa.pl' },
+              areaServed: { '@type': 'Country', name: 'Poland', '@id': 'https://www.wikidata.org/wiki/Q36' },
+              description: 'Porównywarka cen benzyny, diesla i LPG na 8600+ stacjach paliw w Polsce',
+              url: 'https://benzynamapa.pl',
             }),
           }}
         />

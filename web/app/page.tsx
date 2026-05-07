@@ -1,4 +1,4 @@
-import { getStats, getCheapestStations } from '@/lib/data';
+import { getStats, getCheapestStations, formatPrice } from '@/lib/data';
 import HomeClient from './HomeClient';
 import CheapestTable from '@/components/CheapestTable';
 import Top4Cheapest from '@/components/Top4Cheapest';
@@ -8,14 +8,27 @@ import type { Metadata } from 'next';
 
 export const revalidate = 21600;
 
-export const metadata: Metadata = {
-  title: 'Ceny paliw w Polsce dziś – mapa stacji paliw',
-  description: 'Aktualne ceny benzyny i diesla w Polsce dziś. Gdzie zatankować najtaniej? Benzyna 95, diesel, LPG – mapa 8000+ stacji paliw. Aktualizacja 3× dziennie.',
-  alternates: {
-    canonical: 'https://benzynamapa.pl/',
-    languages: { 'x-default': 'https://benzynamapa.pl/' },
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const stats = getStats();
+  const today = new Date().toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
+  const avg95 = stats?.averages.pb95;
+  return {
+    title: `Ceny paliw w Polsce dziś – ${today} | BenzynaMAPA`,
+    description: `Aktualne ceny benzyny i diesla w Polsce ${today}.${avg95 ? ` Benzyna 95 średnio ${formatPrice(avg95)}/l.` : ''} Gdzie zatankować najtaniej? Mapa ${stats?.total_stations?.toLocaleString('pl') ?? '8600'}+ stacji. Aktualizacja 3× dziennie.`,
+    alternates: {
+      canonical: 'https://benzynamapa.pl/',
+      languages: { 'x-default': 'https://benzynamapa.pl/', 'pl-PL': 'https://benzynamapa.pl/' },
+    },
+    openGraph: {
+      title: `Ceny paliw w Polsce – ${today} | BenzynaMAPA`,
+      description: `Benzyna 95${avg95 ? ` ${formatPrice(avg95)}/l` : ''} · Mapa ${stats?.total_stations?.toLocaleString('pl') ?? '8600'}+ stacji paliw w Polsce`,
+      url: 'https://benzynamapa.pl/',
+      siteName: 'BenzynaMAPA',
+      locale: 'pl_PL',
+      type: 'website',
+    },
+  };
+}
 
 const FAQS = [
   { q: 'Gdzie jest dziś najtańsza benzyna w Polsce?', a: 'Aktualne najtańsze ceny benzyny 95 i diesla znajdziesz na naszej interaktywnej mapie i w tabeli najtańszych stacji powyżej. Dane aktualizujemy 3 razy dziennie.' },
