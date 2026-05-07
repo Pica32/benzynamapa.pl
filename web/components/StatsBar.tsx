@@ -1,34 +1,52 @@
 'use client';
-import { Stats, FuelType, FUEL_LABELS } from '@/types';
 
-interface StatsBarProps {
-  stats: Stats;
+import { Stats } from '@/types';
+import { TrendingDown, TrendingUp, Minus, Clock } from 'lucide-react';
+
+function TrendIcon({ value }: { value: number }) {
+  if (value < 0) return <TrendingDown size={14} className="text-green-500" />;
+  if (value > 0) return <TrendingUp size={14} className="text-red-500" />;
+  return <Minus size={14} className="text-gray-400" />;
 }
 
-const FUEL_ORDER: FuelType[] = ['pb95', 'pb98', 'on', 'lpg'];
+export default function StatsBar({ stats }: { stats: Stats }) {
+  const updated = new Date(stats.last_updated).toLocaleString('pl-PL', {
+    hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit',
+  });
 
-export default function StatsBar({ stats }: StatsBarProps) {
   return (
-    <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
-      <div className="max-w-7xl mx-auto px-4 py-2 flex items-center gap-6 min-w-max">
-        {FUEL_ORDER.map(fuel => {
-          const avg = stats.averages[fuel];
-          const trend = stats.trend_7d?.[fuel as keyof typeof stats.trend_7d];
-          if (!avg) return null;
-          const trendStr = trend == null ? '' : trend > 0 ? `+${trend.toFixed(2).replace('.', ',')}` : trend.toFixed(2).replace('.', ',');
-          const trendColor = !trend ? 'text-gray-400' : trend > 0 ? 'text-red-500' : 'text-green-500';
-          return (
-            <div key={fuel} className="flex items-center gap-2 text-sm">
-              <span className="text-gray-500 dark:text-gray-400 font-medium">{FUEL_LABELS[fuel]}</span>
-              <span className="font-black text-gray-900 dark:text-white">{avg.toFixed(2).replace('.', ',')} zł</span>
-              {trend != null && (
-                <span className={`text-xs font-semibold ${trendColor}`}>{trendStr} zł</span>
-              )}
-            </div>
-          );
-        })}
-        <div className="ml-auto text-xs text-gray-400 whitespace-nowrap">
-          Śr. {new Date(stats.last_updated).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}
+    <div className="bg-gradient-to-r from-green-900 via-green-800 to-emerald-900 text-white">
+      <div className="max-w-7xl mx-auto px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-4 sm:gap-8">
+            {[
+              { label: 'Benzyna 95', price: stats.averages.pb95, trend: stats.trend_7d.pb95, key: 'pb95' },
+              { label: 'Diesel', price: stats.averages.on, trend: stats.trend_7d.on, key: 'on' },
+              { label: 'LPG', price: stats.averages.lpg, trend: stats.trend_7d.lpg, key: 'lpg' },
+            ].map(item => (
+              <div key={item.key} className="flex flex-col">
+                <span className="text-green-300 text-xs font-medium uppercase tracking-wide">{item.label}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-white font-bold text-lg leading-tight">
+                    {item.price.toFixed(2).replace('.', ',')}
+                  </span>
+                  <span className="text-green-200 text-xs">zł</span>
+                  <TrendIcon value={item.trend} />
+                  <span className={`text-xs ${item.trend < 0 ? 'text-green-400' : item.trend > 0 ? 'text-red-400' : 'text-gray-400'}`}>
+                    {item.trend > 0 ? '+' : ''}{item.trend.toFixed(2)} zł/7d
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-1.5 text-green-300 text-xs">
+            <Clock size={12} />
+            <span>Aktualizacja: {updated}</span>
+            <span className="text-green-400 font-medium ml-2">
+              {stats.stations_updated_today} stacji
+            </span>
+          </div>
         </div>
       </div>
     </div>
