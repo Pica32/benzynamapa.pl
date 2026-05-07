@@ -87,7 +87,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-title" content="BenzynaMAPA" />
 
         {/* Performance */}
-        <link rel="preload" href="/data/map_data.json" as="fetch" crossOrigin="anonymous" />
+        {/* map_data.json se nenačítá eagerly — spouští se až po hover/klik na mapu */}
         <link rel="preconnect" href="https://tile.openstreetmap.org" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://tile.openstreetmap.org" />
         <link rel="dns-prefetch" href="https://ip-api.com" />

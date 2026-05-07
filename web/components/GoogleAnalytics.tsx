@@ -1,10 +1,9 @@
 'use client';
 import Script from 'next/script';
 
-const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
+const GA_ID = process.env.NEXT_PUBLIC_GA_ID ?? 'G-Y900JP5XKF';
 
 export default function GoogleAnalytics() {
-  if (!GA_ID) return null;
   return (
     <>
       <Script
@@ -18,8 +17,7 @@ export default function GoogleAnalytics() {
           gtag('js', new Date());
           gtag('config', '${GA_ID}', {
             page_path: window.location.pathname,
-            anonymize_ip: true,
-            cookie_flags: 'SameSite=None;Secure'
+            anonymize_ip: true
           });
         `}
       </Script>
