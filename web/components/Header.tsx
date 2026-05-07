@@ -25,7 +25,8 @@ export default function Header() {
               { href: '/marka/', label: 'Sieci stacji', icon: BarChart2 },
               { href: '/historia-cen/', label: 'Historia cen', icon: BarChart2 },
               { href: '/kalkulator/', label: 'Kalkulator', icon: Calculator },
-              { href: '/aktualnosci/', label: 'Aktualności', icon: BookOpen },
+              { href: '/benzyna-vs-diesel/', label: 'Benzyna vs diesel', icon: BookOpen },
+      { href: '/aktualnosci/', label: 'Aktualności', icon: BookOpen },
             ].map(({ href, label, icon: Icon }) => (
               <Link
                 key={href}
