@@ -5,6 +5,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import WebVitals from '@/components/WebVitals';
 import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration';
+import GoogleAnalytics from '@/components/GoogleAnalytics';
 
 const inter = Inter({ subsets: ['latin', 'latin-ext'], display: 'swap', preload: true });
 
@@ -131,6 +132,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className={`${inter.className} bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white min-h-screen flex flex-col`}>
+        <GoogleAnalytics />
         <ServiceWorkerRegistration />
         <WebVitals />
         <Header />

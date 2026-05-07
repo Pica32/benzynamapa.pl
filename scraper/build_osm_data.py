@@ -519,11 +519,24 @@ def compute_stats(prices_list: list, stations_list: list, now_iso: str) -> dict:
 
 
 def build_map_data(stations: list, prices_list: list) -> dict:
+    """Komprimovaný formát pro mapu — minimální JSON payload."""
     price_map = {p['station_id']: p for p in prices_list}
     result = []
     for s in stations:
         p = price_map.get(s['id'])
-        entry = dict(s)
+        # Zkrácené klíče pro menší JSON
+        entry = {
+            'id': s['id'],
+            'name': s['name'],
+            'brand': s['brand'],
+            'lat': round(s['lat'], 5),   # 5 des. míst = přesnost 1m, šetří místo
+            'lng': round(s['lng'], 5),
+            'address': s['address'],
+            'city': s['city'],
+            'region': s['region'],
+            'services': s['services'],
+            'opening_hours': s['opening_hours'],
+        }
         if p:
             entry['p'] = {
                 'n95': p['pb95'], 'n98': p['pb98'],
