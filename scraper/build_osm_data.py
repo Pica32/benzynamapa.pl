@@ -20,11 +20,19 @@ OVERPASS_ENDPOINTS = [
     'https://overpass.kumi.systems/api/interpreter',
     'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
 ]
-QUERY_PL = '[out:json][timeout:120];area["ISO3166-1"="PL"]->.pl;node["amenity"="fuel"](area.pl);out;'
+# Nodes + ways (čerpačky jako polygon) — víc stanic
+QUERY_PL = '''[out:json][timeout:150];
+area["ISO3166-1"="PL"]->.pl;
+(
+  node["amenity"="fuel"](area.pl);
+  way["amenity"="fuel"](area.pl);
+);
+out center;'''
 GPS_CACHE    = os.path.join(os.path.dirname(__file__), 'gps_cache_pl.json')
 OUT_DIR      = os.path.join(os.path.dirname(__file__), '..', 'web', 'public', 'data')
 HISTORY_FILE = os.path.join(os.path.dirname(__file__), 'history_pl.json')
 CENAPALIW    = 'https://www.cenapaliw.pl'
+EPETROL      = 'https://www.e-petrol.pl'
 
 H = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124 Safari/537.36',
@@ -125,13 +133,24 @@ def save_json(path: str, data):
 # ── OSM ────────────────────────────────────────────────────────────────────────
 
 def fetch_osm_stations() -> list:
-    print("Stahuji stanice z OSM (Polsko)…")
+    print("Stahuji stanice z OSM (Polsko, nodes+ways)…")
     for endpoint in OVERPASS_ENDPOINTS:
         for attempt in range(2):
             try:
-                r = requests.post(endpoint, data={'data': QUERY_PL}, headers=OSM_HEADERS, timeout=180)
+                r = requests.post(endpoint, data={'data': QUERY_PL}, headers=OSM_HEADERS, timeout=200)
                 r.raise_for_status()
-                nodes = r.json().get('elements', [])
+                elements = r.json().get('elements', [])
+                # Ways mají center místo lat/lon — normalizuj
+                nodes = []
+                for el in elements:
+                    if el.get('type') == 'way':
+                        center = el.get('center', {})
+                        if center.get('lat') and center.get('lon'):
+                            el['lat'] = center['lat']
+                            el['lon'] = center['lon']
+                            nodes.append(el)
+                    elif el.get('lat') and el.get('lon'):
+                        nodes.append(el)
                 print(f"  → {len(nodes)} stanic z OSM ({endpoint.split('/')[2]})")
                 return nodes
             except Exception as e:
@@ -139,6 +158,40 @@ def fetch_osm_stations() -> list:
                 if attempt == 0:
                     time.sleep(15)
     return []
+
+
+# ── e-petrol.pl — národní průměrné ceny ────────────────────────────────────────
+
+def fetch_epetrol_averages() -> dict:
+    """Stáhne národní průměrné ceny z e-petrol.pl (přesné průměry ON/LPG/PB98)."""
+    try:
+        r = requests.get(f'{EPETROL}/ceny-paliw/srednie-ceny-paliw-w-polsce', headers=H, timeout=20)
+        soup = BeautifulSoup(r.text, 'html.parser')
+        avgs = {}
+        # e-petrol.pl má tabulku nebo sekci s průměrnými cenami
+        for row in soup.select('table tr, .fuel-price-row, [class*=price-row]'):
+            text = row.get_text(' ', strip=True).lower()
+            for fuel, keywords in [
+                ('pb95', ['pb 95', 'e10', 'benzyna 95']),
+                ('pb98', ['pb 98', 'e5', 'benzyna 98']),
+                ('on',   ['olej nap', 'diesel', 'on ']),
+                ('lpg',  ['lpg', 'autogaz']),
+            ]:
+                if any(kw in text for kw in keywords):
+                    # Najdi číslo v řádku — cena PLN
+                    prices = re.findall(r'\b(\d+[.,]\d{2})\b', text)
+                    for p in prices:
+                        v = parse_price_pln(p)
+                        pmin, pmax = PRICE_RANGE.get(fuel, (1.0, 15.0))
+                        if v and pmin <= v <= pmax:
+                            avgs[fuel] = v
+                            break
+        if avgs:
+            print(f"  → e-petrol.pl průměry: {avgs}")
+        return avgs
+    except Exception as e:
+        print(f"  ✗ e-petrol.pl: {e}")
+        return {}
 
 
 # ── cenapaliw.pl scraper ───────────────────────────────────────────────────────
@@ -493,13 +546,16 @@ def main():
     if not osm_nodes:
         print("VAROVÁNÍ: Žádné OSM stanice. Používám data z cache pokud existují.")
 
-    # 2. Scrape cenapaliw.pl
+    # 2. Scrape cenapaliw.pl (reálné PB95 ceny)
     scraped = scrape_all_prices()
 
-    # 3. Match cenapaliw → OSM
+    # 3. e-petrol.pl průměry (lepší než historické fallbacky)
+    epetrol_avgs = fetch_epetrol_averages()
+
+    # 4. Match cenapaliw → OSM
     price_map = match_prices_to_osm(scraped, osm_nodes) if osm_nodes and scraped else {}
 
-    # 4. Fallback průměry z historie
+    # 5. Fallback průměry: e-petrol > historie > FALLBACK_AVG
     hist = load_json(HISTORY_FILE).get('history', [])
     fallback = FALLBACK_AVG.copy()
     if hist:
@@ -507,6 +563,10 @@ def main():
         for k in fallback:
             if last.get(k):
                 fallback[k] = last[k]
+    # e-petrol přebije historické průměry
+    for k, v in epetrol_avgs.items():
+        if v:
+            fallback[k] = v
 
     # 5. Sestavení výsledků
     stations_list, prices_list = [], []

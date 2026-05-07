@@ -10,7 +10,7 @@ export const revalidate = 21600;
 
 export const metadata: Metadata = {
   title: 'Ceny paliw w Polsce dziś – mapa stacji paliw',
-  description: 'Aktualne ceny benzyny i diesla w Polsce dziś. Gdzie zatankować najtaniej? Benzyna 95, diesel, LPG – mapa 6000+ stacji paliw. Aktualizacja 3× dziennie.',
+  description: 'Aktualne ceny benzyny i diesla w Polsce dziś. Gdzie zatankować najtaniej? Benzyna 95, diesel, LPG – mapa 8000+ stacji paliw. Aktualizacja 3× dziennie.',
   alternates: {
     canonical: 'https://benzynamapa.pl/',
     languages: { 'x-default': 'https://benzynamapa.pl/' },
@@ -22,7 +22,7 @@ const FAQS = [
   { q: 'Jak znaleźć najtańszy diesel w pobliżu?', a: 'Kliknij przycisk „Znajdź mnie" na mapie – zobaczysz stacje paliw posortowane według odległości od Twojej lokalizacji z cenami diesla.' },
   { q: 'Czy ceny na BenzynaMAPA są aktualne?', a: 'Dane aktualizujemy automatycznie 3 razy dziennie. Każda cena ma wyświetlony czas ostatniej aktualizacji.' },
   { q: 'Jak działają kolory stacji na mapie?', a: 'Zielony = najtańsze 20% stacji, pomarańczowy = cena średnia, czerwony = najdroższe 20%. Kolory zmieniają się w zależności od wybranego rodzaju paliwa.' },
-  { q: 'Ile stacji paliw monitorujecie?', a: 'Monitorujemy ponad 6000 stacji paliw w całej Polsce – od dużych sieci (Orlen, Shell, BP, Circle K) po niezależnych operatorów.' },
+  { q: 'Ile stacji paliw monitorujecie?', a: 'Monitorujemy ponad 8600 stacji paliw w całej Polsce – od dużych sieci (Orlen, Shell, BP, Circle K) po niezależnych operatorów i stacje przy hipermarketach.' },
   { q: 'Które sieci stacji są najtańsze w Polsce?', a: 'Trwale niższe ceny mają zwykle stacje niezależne (Moya, Huzar, niezależne) oraz stacje przy supermarketach. Shell, BP i Circle K są z reguły droższe od średniej o 0,20–0,40 zł/l.' },
   { q: 'Czy warto tankować LPG zamiast benzyny?', a: 'LPG jest zwykle o 60–70% tańsze niż benzyna 95. Wadą jest wyższe spalanie (~25%) i konieczność przeróbki samochodu. Przy rocznym przebiegu powyżej 25 000 km przeróbka zwraca się zazwyczaj w 4–6 lat.' },
   { q: 'Jak duża jest różnica między najtańszą a najdroższą stacją?', a: 'Różnica między najtańszą a najdroższą stacją w tym samym mieście wynosi zazwyczaj 0,30–0,60 zł/l. Przy pełnym baku 50 litrów to oszczędność 15–30 zł za jedno tankowanie.' },

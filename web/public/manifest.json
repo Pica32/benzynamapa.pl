@@ -1,0 +1,55 @@
+{
+  "name": "BenzynaMAPA – Ceny paliw w Polsce",
+  "short_name": "BenzynaMAPA",
+  "description": "Aktualne ceny benzyny, diesla i LPG na 4400+ stacjach w Polsce. Interaktywna mapa, ranking najtańszych stacji.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#16a34a",
+  "orientation": "portrait-primary",
+  "lang": "pl",
+  "categories": ["navigation", "utilities"],
+  "icons": [
+    {
+      "src": "/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/map-preview.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Mapa stacji paliw w Polsce"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Najtańsza benzyna 95",
+      "short_name": "Benzyna",
+      "url": "/najtansze-benzyna/",
+      "icons": [{ "src": "/icon-192.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Najtańszy diesel",
+      "short_name": "Diesel",
+      "url": "/najtansze-diesel/",
+      "icons": [{ "src": "/icon-192.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Najtańszy LPG",
+      "short_name": "LPG",
+      "url": "/najtansze-lpg/",
+      "icons": [{ "src": "/icon-192.svg", "sizes": "192x192" }]
+    }
+  ]
+}
