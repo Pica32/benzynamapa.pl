@@ -17,7 +17,11 @@ export async function generateMetadata(): Promise<Metadata> {
     description: `Aktualne ceny benzyny i diesla w Polsce ${today}.${avg95 ? ` Benzyna 95 średnio ${formatPrice(avg95)}/l.` : ''} Gdzie zatankować najtaniej? Mapa ${stats?.total_stations?.toLocaleString('pl') ?? '8600'}+ stacji. Aktualizacja 3× dziennie.`,
     alternates: {
       canonical: 'https://benzynamapa.pl/',
-      languages: { 'x-default': 'https://benzynamapa.pl/', 'pl-PL': 'https://benzynamapa.pl/' },
+      languages: {
+        'pl': 'https://benzynamapa.pl/',
+        'pl-PL': 'https://benzynamapa.pl/',
+        'x-default': 'https://benzynamapa.pl/',
+      },
     },
     openGraph: {
       title: `Ceny paliw w Polsce – ${today} | BenzynaMAPA`,
@@ -74,7 +78,7 @@ export default async function HomePage() {
             <span className="text-green-700 dark:text-green-400">
               {stats.total_stations.toLocaleString('pl')} stacji paliw
             </span>
-            {' '}na mapie, benzyna 95 najtaniej
+            {' '}na mapie. Najtańsza benzyna 95{stats.averages.pb95 ? ` od ${stats.averages.pb95.toFixed(2).replace('.', ',')} zł/l` : ''}, najtańszy diesel{stats.averages.on ? ` od ${stats.averages.on.toFixed(2).replace('.', ',')} zł/l` : ''}.
           </h1>
         </div>
       </div>

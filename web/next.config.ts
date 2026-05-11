@@ -16,6 +16,13 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      // www → non-www 301 redirect
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'www.benzynamapa.pl' }],
+        destination: 'https://benzynamapa.pl/:path*',
+        permanent: true,
+      },
       { source: '/blog', destination: '/aktualnosci/', permanent: true },
       { source: '/blog/:slug', destination: '/aktualnosci/:slug/', permanent: true },
       { source: '/news', destination: '/aktualnosci/', permanent: true },

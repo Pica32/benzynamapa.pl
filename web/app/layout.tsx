@@ -62,6 +62,11 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: 'https://benzynamapa.pl/',
+    languages: {
+      'pl': 'https://benzynamapa.pl/',
+      'pl-PL': 'https://benzynamapa.pl/',
+      'x-default': 'https://benzynamapa.pl/',
+    },
   },
   appleWebApp: {
     capable: true,
