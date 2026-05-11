@@ -2,5 +2,14 @@
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
   "installCommand": "npm ci",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "www.benzynamapa.pl" }],
+      "destination": "https://benzynamapa.pl/$1",
+      "permanent": true,
+      "statusCode": 301
+    }
+  ]
 }
