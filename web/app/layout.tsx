@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
-import Script from 'next/script';
 import './globals.css';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -79,6 +78,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pl">
       <head>
+        {/* Google AdSense — must be in raw <head> for ownership verification */}
+        <meta name="google-adsense-account" content="ca-pub-5944037956815415" />
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5944037956815415"
+          crossOrigin="anonymous"
+        />
+
         {/* Icons — PNG pro max. kompatibilitu (Safari, SEO auditátoři) */}
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
@@ -170,13 +177,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className={`${inter.className} bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white min-h-screen flex flex-col`}>
-        <Script
-          id="adsbygoogle-init"
-          async
-          strategy="afterInteractive"
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5944037956815415"
-          crossOrigin="anonymous"
-        />
         <GoogleAnalytics />
         <ServiceWorkerRegistration />
         <WebVitals />
