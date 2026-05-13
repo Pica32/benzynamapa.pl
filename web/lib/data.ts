@@ -156,6 +156,30 @@ export function formatPrice(price: number | null): string {
   return price.toFixed(2).replace('.', ',') + ' zł';
 }
 
+export function getBrandAvgPrice(brandKeys: string[], fuel: FuelType = 'pb95'): { avg: number; n: number } | null {
+  const stations = getStationsWithPrices();
+  const keys = brandKeys.map(k => k.toLowerCase());
+  const prices = stations
+    .filter(s => keys.some(k => s.brand.toLowerCase().includes(k)))
+    .map(s => s.price?.[fuel])
+    .filter((p): p is number => p != null);
+  if (prices.length === 0) return null;
+  return { avg: prices.reduce((x, y) => x + y, 0) / prices.length, n: prices.length };
+}
+
+export function getBrandOffset(brandKeys: string[], fuel: FuelType = 'pb95'): number | null {
+  const stats = getStats();
+  const data = getBrandAvgPrice(brandKeys, fuel);
+  if (!stats || !data) return null;
+  return data.avg - stats.averages[fuel];
+}
+
+export function formatOffset(offset: number): string {
+  if (Math.abs(offset) < 0.025) return '±0 zł';
+  const sign = offset > 0 ? '+' : '−';
+  return `${sign}${Math.abs(offset).toFixed(2).replace('.', ',')} zł`;
+}
+
 export function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);

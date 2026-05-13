@@ -1,4 +1,4 @@
-import { getStats, getCheapestStations, formatPrice } from '@/lib/data';
+import { getStats, getCheapestStations, formatPrice, getBrandOffset, formatOffset } from '@/lib/data';
 import HomeClient from './HomeClient';
 import CheapestTable from '@/components/CheapestTable';
 import Top4Cheapest from '@/components/Top4Cheapest';
@@ -18,7 +18,6 @@ export async function generateMetadata(): Promise<Metadata> {
     alternates: {
       canonical: 'https://benzynamapa.pl/',
       languages: {
-        'pl': 'https://benzynamapa.pl/',
         'pl-PL': 'https://benzynamapa.pl/',
         'x-default': 'https://benzynamapa.pl/',
       },
@@ -53,6 +52,18 @@ export default async function HomePage() {
 
   const cheapestDiesel  = getCheapestStations('on', 10);
   const cheapestBenzyna = getCheapestStations('pb95', 10);
+
+  const brandGroups: { label: string; keys: string[] }[] = [
+    { label: 'Moya / Huzar', keys: ['moya', 'huzar'] },
+    { label: 'Orlen / Lotos', keys: ['orlen', 'lotos'] },
+    { label: 'Circle K', keys: ['circle k', 'circlek', 'statoil'] },
+    { label: 'BP', keys: ['bp'] },
+    { label: 'Shell', keys: ['shell'] },
+  ];
+  const brandComparison = brandGroups
+    .map(g => ({ label: g.label, offset: getBrandOffset(g.keys, 'pb95') }))
+    .filter((x): x is { label: string; offset: number } => x.offset != null)
+    .sort((a, b) => a.offset - b.offset);
 
   return (
     <>
@@ -190,20 +201,22 @@ export default async function HomePage() {
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
             Średnie odchylenia od krajowej średniej ceny benzyny 95 według danych BenzynaMAPA.pl:
           </p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-            {[
-              { brand: 'Moya / Huzar', diff: '−0,20 zł', color: 'text-green-700 dark:text-green-400' },
-              { brand: 'Orlen / Lotos', diff: '±0 zł', color: 'text-gray-600 dark:text-gray-300' },
-              { brand: 'Circle K', diff: '+0,25 zł', color: 'text-gray-600 dark:text-gray-300' },
-              { brand: 'BP', diff: '+0,30 zł', color: 'text-orange-600 dark:text-orange-400' },
-              { brand: 'Shell', diff: '+0,35 zł', color: 'text-red-600 dark:text-red-400' },
-              { brand: 'Autostrady', diff: '+0,40 zł', color: 'text-red-700 dark:text-red-500' },
-            ].map(({ brand, diff, color }) => (
-              <div key={brand} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 text-center">
-                <div className={`text-lg font-black ${color}`}>{diff}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-tight">{brand}</div>
-              </div>
-            ))}
+          <div className={`grid grid-cols-2 sm:grid-cols-3 ${brandComparison.length >= 5 ? 'md:grid-cols-5' : 'md:grid-cols-4'} gap-3`}>
+            {brandComparison.map(({ label, offset }) => {
+              const color =
+                offset <= -0.15 ? 'text-green-700 dark:text-green-400' :
+                offset < -0.025 ? 'text-green-600 dark:text-green-500' :
+                offset < 0.025 ? 'text-gray-600 dark:text-gray-300' :
+                offset < 0.20 ? 'text-orange-600 dark:text-orange-400' :
+                offset < 0.35 ? 'text-red-600 dark:text-red-400' :
+                'text-red-700 dark:text-red-500';
+              return (
+                <div key={label} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 text-center">
+                  <div className={`text-lg font-black ${color}`}>{formatOffset(offset)}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-tight">{label}</div>
+                </div>
+              );
+            })}
           </div>
         </section>
 
