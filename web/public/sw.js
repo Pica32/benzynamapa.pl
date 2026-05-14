@@ -1,9 +1,5 @@
-const CACHE = 'benzynamapa-v1';
+const CACHE = 'benzynamapa-v2';
 const STATIC = [
-  '/',
-  '/najtansze-benzyna/',
-  '/najtansze-diesel/',
-  '/najtansze-lpg/',
   '/manifest.json',
   '/icon-192.svg',
   '/icon-512.svg',
@@ -29,28 +25,52 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  const url = new URL(e.request.url);
+  const req = e.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
 
-  // Data soubory — network first, fallback na cache
-  if (DATA_URLS.some(u => url.pathname === u)) {
+  // HTML dokumenty (navigace) — VŽDY network-first.
+  // Stale HTML obsahuje stale CSS/JS hash → broken stránka. Tomuto chceme předejít.
+  if (req.mode === 'navigate' || req.destination === 'document') {
     e.respondWith(
-      fetch(e.request)
-        .then(res => {
-          const clone = res.clone();
-          caches.open(DATA_CACHE).then(c => c.put(e.request, clone));
-          return res;
-        })
-        .catch(() => caches.match(e.request))
+      fetch(req).catch(() => caches.match(req))
     );
     return;
   }
 
-  // Mapy tiles — cache first, jinak network
+  // Data JSON — network-first, fallback cache
+  if (DATA_URLS.some(u => url.pathname === u)) {
+    e.respondWith(
+      fetch(req).then(res => {
+        const clone = res.clone();
+        caches.open(DATA_CACHE).then(c => c.put(req, clone));
+        return res;
+      }).catch(() => caches.match(req))
+    );
+    return;
+  }
+
+  // OSM tiles — cache-first
   if (url.hostname === 'tile.openstreetmap.org') {
     e.respondWith(
-      caches.match(e.request).then(cached => cached || fetch(e.request).then(res => {
+      caches.match(req).then(cached => cached || fetch(req).then(res => {
         const clone = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone));
+        caches.open(CACHE).then(c => c.put(req, clone));
+        return res;
+      }))
+    );
+    return;
+  }
+
+  // Hashed static assety (CSS/JS/IMG s otiskem) — cache-first, immutable.
+  // Pokud cached není, jdeme na network a uložíme.
+  if (url.pathname.startsWith('/_next/static/')) {
+    e.respondWith(
+      caches.match(req).then(cached => cached || fetch(req).then(res => {
+        if (res.ok) {
+          const clone = res.clone();
+          caches.open(CACHE).then(c => c.put(req, clone));
+        }
         return res;
       }))
     );
@@ -59,9 +79,9 @@ self.addEventListener('fetch', e => {
 
   // Ostatní — stale-while-revalidate
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      const fresh = fetch(e.request).then(res => {
-        if (res.ok) caches.open(CACHE).then(c => c.put(e.request, res.clone()));
+    caches.match(req).then(cached => {
+      const fresh = fetch(req).then(res => {
+        if (res.ok) caches.open(CACHE).then(c => c.put(req, res.clone()));
         return res;
       }).catch(() => cached);
       return cached || fresh;
