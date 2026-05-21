@@ -28,11 +28,25 @@ jobs:
         run: python scraper/build_osm_data.py
 
       - name: Commit updated data
+        id: commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add web/public/data/
           git add scraper/history_pl.json || true
           git add scraper/gps_cache_pl.json || true
-          git diff --staged --quiet || git commit -m "data: aktualizacja cen paliw $(date -u +'%Y-%m-%d %H:%M UTC')"
-          git push
+          if git diff --staged --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "→ Žádné změny v datech, commit přeskočen"
+          else
+            git commit -m "data: aktualizacja cen paliw $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # IndexNow: po každé změně cen pinguje Bing/Yandex/Seznam/Naver, aby okamžitě
+      # přecrawlovali. Bing zásobuje ChatGPT a Copilot — kritické pro AI viditelnost.
+      - name: Ping IndexNow (Bing, Yandex, Seznam, Naver)
+        if: steps.commit.outputs.changed == 'true'
+        continue-on-error: true
+        run: python scraper/indexnow_ping.py

@@ -78,11 +78,16 @@ export default async function HomePage() {
               name: q,
               acceptedAnswer: { '@type': 'Answer', text: a },
             })),
+            // Speakable: voice search / AI Overviews highlight nejdůležitějších částí stránky
+            speakable: {
+              '@type': 'SpeakableSpecification',
+              cssSelector: ['h1', '.faq-question', '.home-hero'],
+            },
           }),
         }}
       />
 
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 px-4 py-3">
+      <div className="home-hero bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 px-4 py-3">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-sm font-semibold text-gray-600 dark:text-gray-400">
             Ceny paliw w Polsce dziś —{' '}
@@ -91,6 +96,23 @@ export default async function HomePage() {
             </span>
             {' '}na mapie. Najtańsza benzyna 95{stats.averages.pb95 ? ` od ${stats.averages.pb95.toFixed(2).replace('.', ',')} zł/l` : ''}, najtańszy diesel{stats.averages.on ? ` od ${stats.averages.on.toFixed(2).replace('.', ',')} zł/l` : ''}.
           </h1>
+        </div>
+      </div>
+
+      {/* AI Answer Box — strukturovaná odpověď pro AI Overviews / ChatGPT extraction */}
+      <div className="bg-gradient-to-br from-green-50 via-emerald-50 to-green-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 border-b border-green-100 dark:border-gray-700">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            <strong className="text-green-700 dark:text-green-400">Aktualne średnie ceny paliw w Polsce ({new Date().toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' })}):</strong>{' '}
+            Benzyna 95: <strong>{stats.averages.pb95.toFixed(2).replace('.', ',')} zł/l</strong>,
+            Diesel: <strong>{stats.averages.on.toFixed(2).replace('.', ',')} zł/l</strong>,
+            {stats.averages.lpg && <> LPG: <strong>{stats.averages.lpg.toFixed(2).replace('.', ',')} zł/l</strong>,</>}
+            {stats.averages.pb98 && <> Pb98: <strong>{stats.averages.pb98.toFixed(2).replace('.', ',')} zł/l</strong></>}
+            . Monitorujemy {stats.total_stations.toLocaleString('pl')} stacji paliw, dane aktualizujemy 3× dziennie z polskich źródeł i OpenStreetMap.{' '}
+            <Link href="/maksymalne-ceny-paliw/" className="text-green-700 dark:text-green-400 underline">Akcyza 1,529 zł/l, VAT 23%</Link>.
+            Najtańsze sieci: <Link href="/marka/moya/" className="text-green-700 dark:text-green-400 underline">Moya</Link>,
+            <Link href="/marka/huzar/" className="text-green-700 dark:text-green-400 underline"> Huzar</Link>.
+          </p>
         </div>
       </div>
 
@@ -153,7 +175,7 @@ export default async function HomePage() {
           <div className="space-y-3">
             {FAQS.map(({ q, a }) => (
               <details key={q} className="group bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-                <summary className="font-semibold text-gray-900 dark:text-white cursor-pointer list-none flex justify-between items-center">
+                <summary className="faq-question font-semibold text-gray-900 dark:text-white cursor-pointer list-none flex justify-between items-center">
                   {q}
                   <span className="text-green-600 group-open:rotate-180 transition-transform ml-3 flex-shrink-0">▼</span>
                 </summary>

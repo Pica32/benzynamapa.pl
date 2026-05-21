@@ -647,6 +647,521 @@ Turystyka paliwowa to temat głównie historyczny – gdy Białoruś była tańs
 `,
 },
 
+// ── P1.10: 11 nowych artykułów ────────────────────────────────────────────
+
+'akcyza-paliwowa-2026-waloryzacja': {
+  faqs: [
+    { q: 'Ile wynosi akcyza na paliwo w 2026?', a: 'W Polsce: benzyna bezołowiowa Pb95/Pb98 - 1,529 zł/l, olej napędowy (diesel) - 1,176 zł/l, LPG autogaz - 0,387 zł/l. Stawki ustala Ministerstwo Finansów.' },
+    { q: 'Czy będzie waloryzacja akcyzy?', a: 'Akcyza nie jest automatycznie waloryzowana inflacją (jak np. minimum krajowe). Każda zmiana wymaga uchwały Sejmu. Od 2022 stawki utrzymują się na podobnym poziomie z drobnymi zmianami.' },
+    { q: 'Jaki udział akcyzy w cenie litra?', a: 'Akcyza stanowi ~24% ceny detalicznej benzyny i ~20% diesla. Z dodatkiem opłaty paliwowej, opłaty emisyjnej i VAT 23% łączne podatki przekraczają 50% ceny.' },
+    { q: 'Polska vs UE - jak wypada akcyza?', a: 'Polska ma jedną z najniższych akcyz w UE. Średnia UE: ~2,5 zł/l, Niemcy ~3,0 zł/l, Holandia ~3,2 zł/l, Polska 1,529 zł/l. Stąd polskie paliwo jest tańsze niż w większości krajów UE.' },
+    { q: 'Czy akcyza wzrośnie z powodu ETS2?', a: 'ETS2 (od 2027) to oddzielny mechanizm - nie waloryzacja akcyzy, ale dodatkowy koszt CO2 na importera/rafinera. Eksperci szacują wpływ +0,30-0,80 zł/l do 2030.' },
+  ],
+  content: `
+## Akcyza paliwowa 2026 w Polsce
+
+Akcyza to drugi największy podatek od paliwa (po VAT). W 2026 stawki w Polsce wynoszą:
+
+| Paliwo | Akcyza zł/l | Udział w cenie |
+|---|---|---|
+| Benzyna Pb95/Pb98 | **1,529 zł** | ~24% |
+| Olej napędowy (Diesel) | **1,176 zł** | ~20% |
+| LPG (autogaz) | **0,387 zł** | ~14% |
+| CNG | 0 zł | 0% (zwolnione) |
+
+Razem z **opłatą paliwową** (0,298 zł/l) i **opłatą emisyjną** (0,08 zł/l) oraz **VAT 23%** od całości, łączne obciążenia podatkowe wynoszą **ponad 50% ceny detalicznej**.
+
+## Polska vs UE
+
+Polska należy do krajów z najniższą akcyzą na paliwo w UE. Średnia unijna to ok. 2,5 zł/l, Niemcy 3,0 zł, Holandia 3,2 zł. To główny powód dla którego paliwo w Polsce jest tańsze niż na zachodzie Europy.
+
+## Czy szykuje się waloryzacja?
+
+Akcyza nie podlega automatycznej waloryzacji inflacją. Każda zmiana wymaga ustawy. Od 2022 stawki są stabilne. **Niezwiązany ze akcyzą** jest nowy system **ETS2** (od 2027), który nałoży dodatkowe koszty CO2 na rafinerie - szacunkowo +0,30-0,80 zł/l do 2030.
+
+Więcej: [Składowe ceny paliwa](/maksymalne-ceny-paliw/) | [ETS2 a ceny paliw](/aktualnosci/ets2-system-handlu-emisjami-paliwa-2027/)
+`,
+},
+
+'ets2-system-handlu-emisjami-paliwa-2027': {
+  faqs: [
+    { q: 'Co to jest ETS2?', a: 'ETS2 (Emissions Trading System 2) to nowy system UE handlu emisjami CO2 obejmujący transport drogowy i budownictwo. Działa od 2027 - rafinerie muszą kupować pozwolenia na emisję CO2 z paliw, koszt przerzucają na konsumenta.' },
+    { q: 'Jak ETS2 wpłynie na ceny paliw w Polsce?', a: 'Szacunki Komisji Europejskiej: +0,30-0,80 zł/l od 2027, narastająco do +1,00-1,50 zł/l w 2030. Dokładny wpływ zależy od ceny pozwolenia CO2 na rynku ETS2.' },
+    { q: 'Czy Polska może się wycofać z ETS2?', a: 'Nie. ETS2 to obowiązkowa regulacja UE - obejmuje wszystkie kraje członkowskie. Polska może lobbować za złagodzeniem (mechanizm rekompensaty cenowej), ale nie może się wycofać bez wystąpienia z UE.' },
+    { q: 'Kiedy ETS2 startuje?', a: 'Oficjalny start: 1 stycznia 2027. Pierwsze 2 lata (2027-2028) z mechanizmem stabilizacji cen (max 45 EUR/tCO2). Pełna swoboda cenowa od 2029.' },
+    { q: 'Jak przygotować się jako kierowca?', a: 'Rozważ: (1) wymianę auta na bardziej oszczędne, (2) hybrydę lub elektryka jeśli dużo jeździsz, (3) LPG (zwolniony z ETS2!), (4) optymalizacja jazdy (tempomat, ciśnienie opon).' },
+  ],
+  content: `
+## ETS2 - co to jest i kogo dotyczy
+
+**ETS2** (Emissions Trading System 2) to drugi po znanym ETS system handlu emisjami UE, obejmujący od 2027:
+
+- **Transport drogowy** - benzyna, diesel, LPG (CNG zwolniony)
+- **Budownictwo** - ogrzewanie domów
+
+Mechanizm: rafinerie i importerzy paliw muszą kupować pozwolenia na emisję CO2. Koszt przerzucają na cenę paliwa.
+
+## Szacunkowy wpływ na ceny w Polsce
+
+| Rok | Cena CO2 ETS2 | Wpływ na Pb95 zł/l |
+|---|---|---|
+| 2027 | ~30 EUR/t | +0,15 - 0,30 zł |
+| 2028 | ~40 EUR/t | +0,25 - 0,40 zł |
+| 2030 | ~60-80 EUR/t | +0,50 - 1,00 zł |
+| 2035 | ~100 EUR/t | +1,00 - 1,50 zł |
+
+Spalanie 1 l benzyny = ~2,3 kg CO2. Przy 40 EUR/t to +0,09 EUR/l = +0,40 zł/l.
+
+## Co zrobić?
+
+- **Krótkoterminowo** (2026-2027): bez zmian
+- **Średnio** (2028-2030): rozważ tańsze paliwo (LPG zwolniony), bardziej oszczędne auto
+- **Długo** (2030+): elektryk lub hybryda
+
+[Akcyza 2026](/aktualnosci/akcyza-paliwowa-2026-waloryzacja/) | [LPG 2026](/lpg/)
+`,
+},
+
+'najtansze-stacje-a1-a2-a4-ranking-2026': {
+  faqs: [
+    { q: 'Czy stacje na autostradzie są droższe?', a: 'Tak, zazwyczaj o 0,30-0,50 zł/l. Wyjątki: niektóre Orlen i Lotos przy A2/A4. Najtańsze rozwiązanie: zjazd do najbliższego miasta (1-3 km), tankowanie tam, powrót na autostradę.' },
+    { q: 'Najtańsza stacja na A2?', a: 'Ranking zmienia się dziennie. Pełna lista: BenzynaMAPA.pl/autostrada/a2/. Historycznie najtańsze są stacje Orlen Konin i Łowicz, oraz Moya w okolicach Poznania.' },
+    { q: 'Najtańsza stacja na A4?', a: 'A4 to najdłuższa polska autostrada (672 km Zgorzelec-Korczowa). Najtańsze stacje to zwykle Orlen w okolicach Wrocławia, Tarnowa i Rzeszowa.' },
+    { q: 'Czy warto zjeżdżać z autostrady po tańsze paliwo?', a: 'Tak, jeśli zjazd jest blisko (do 3 km od autostrady) i różnica cenowa min. 0,30 zł/l. Przy 50l baku 0,30 zł × 50 = 15 zł oszczędności pokrywa zjazd i powrót.' },
+    { q: 'Karty lojalnościowe na autostradzie?', a: 'Tak - Orlen Vitay, BP BonusMania, Shell ClubSmart działają na wszystkich stacjach sieci, też na autostradach. Rabat 0,05-0,15 zł/l dodatkowo do bazowej ceny.' },
+  ],
+  content: `
+## Stacje przy autostradzie - dlaczego drożej?
+
+Stacje paliw bezpośrednio przy zjazdach autostradowych są zwykle o **0,30-0,50 zł/l droższe** niż średnia w regionie. Powody:
+
+- **24/7 obsługa** = wyższe koszty pracy
+- **Duża restauracja, parking** = wyższe koszty operacyjne
+- **Inelastyczny popyt** = zmęczeni kierowcy płacą każdą cenę
+- **Marża sieciowa** = "premium location" w cenniku
+
+## Strategia: zjazd do najbliższego miasta
+
+**Test ekonomiczny:** Zjazd 1-3 km od autostrady, tankowanie w mieście, powrót. Przy różnicy 0,30 zł/l i baku 50 l - **oszczędzasz 15 zł**, pokryjesz 6-10 km objazdu (zużycie 0,5-1l = 3-6 zł).
+
+## Ranking według trasy
+
+| Autostrada | Najtańsze stacje | Drożej |
+|---|---|---|
+| **A1** (Trójmiasto - granica CZ) | Orlen Tczew, Lotos Toruń | Shell, BP MOP |
+| **A2** (Świecko - Terespol) | Orlen Konin, Moya Poznań | Shell, BP MOP |
+| **A4** (granica DE - Korczowa) | Orlen Wrocław, Verva Tarnów | Shell, OMV |
+| **S7** (Gdańsk - Chyżne) | Orlen Olsztyn, Lotos Kielce | Premium MOP |
+| **S8** (Wrocław - Białystok) | Orlen Łódź, Moya | BP MOP |
+
+Aktualne ceny: [Mapa BenzynaMAPA.pl](/) z filtrem "Najtańsze".
+
+[Strony autostrad](/autostrada/) | [Karty paliwowe](/aktualnosci/karty-paliwowe-orlen-vitay-bp-porownanie-2026/)
+`,
+},
+
+'lotos-navigator-vs-orlen-vitay-2026': {
+  faqs: [
+    { q: 'Czy Lotos Navigator nadal działa po fuzji?', a: 'Tak. Po przejęciu Lotosu przez Orlen (2022) Navigator nadal działa równolegle z Vitay. Możesz mieć obie karty. Stopniowo Lotos przechodzi na markę Orlen, ale Navigator pozostaje aktywny.' },
+    { q: 'Czym Lotos Navigator różni się od Orlen Vitay?', a: 'Navigator - punkty za zakup paliwa (1 pkt/l), wymiana na rabat lub gadżety. Vitay - punkty + benefity Orlen, integracja z aplikacją mobilną, rabaty na myjnie i car wash.' },
+    { q: 'Ile można zaoszczędzić na karcie?', a: 'Realny rabat: 0,05-0,15 zł/l (1-3% od ceny). Przy rocznym przebiegu 15 000 km i 7l/100km to 1050 l × 0,10 zł = ~105 zł rocznie.' },
+    { q: 'Czy można łączyć karty Vitay i Navigator?', a: 'Tak - jeśli masz obie. Vitay przy tankowaniu na Orlen, Navigator przy Lotos. Punkty są osobne, nie łączą się.' },
+    { q: 'Karta lojalnościowa vs cena - co ważniejsze?', a: 'Cena. Rabat z karty (0,10 zł/l) jest mniejszy niż różnica między tanią a drogą stacją (0,30-0,50 zł/l). Najpierw szukaj najtańszej stacji, potem dodaj kartę.' },
+  ],
+  content: `
+## Lotos Navigator vs Orlen Vitay po fuzji 2022
+
+Po przejęciu Grupy Lotos przez Orlen w 2022 obie marki działają jako jeden koncern, ale **programy lojalnościowe pozostają osobne**.
+
+## Porównanie programów
+
+| Cecha | Orlen Vitay | Lotos Navigator |
+|---|---|---|
+| Stacje | ~1850 Orlen | ~400 byłych Lotos |
+| Punkty za 1l | 1 pkt | 1 pkt |
+| Wymiana 1 pkt = | ~0,01 zł rabatu | ~0,01 zł rabatu |
+| Realny rabat | 0,05-0,15 zł/l | 0,05-0,12 zł/l |
+| Aplikacja | Vitay (lepsza) | Navigator (prostsza) |
+| Sklep nagród | Większy wybór | Mniejszy wybór |
+| Karta plastikowa | Tak | Tak |
+
+## Strategia 2026
+
+1. **Załóż obie karty** - są bezpłatne, dają rabat na obu sieciach
+2. **Tankuj w Orlen** preferowanie (więcej stacji w Polsce)
+3. **Nie kupuj droższego paliwa tylko dla punktów** - rabat 0,10 zł/l nie pokryje 0,40 zł/l różnicy z tańszą siecią
+4. **Stacje przy autostradzie** - karta lojalnościowa pomoże, ale i tak są drogie
+
+## Czy fuzja oznacza koniec Lotosu?
+
+Marka **Lotos powoli znika** z polskiego rynku - większość stacji rebrandowana na Orlen w latach 2023-2026. Pozostałe ~400 stacji nadal akceptują Navigator. **Punkty Navigator zachowują wartość** - nie przepadają.
+
+[Karty paliwowe 2026](/aktualnosci/karty-paliwowe-orlen-vitay-bp-porownanie-2026/) | [Orlen ceny](/marka/orlen/)
+`,
+},
+
+'paliwo-w-firmie-pit-vat-kilometrowka-2026': {
+  faqs: [
+    { q: 'Ile VAT mogę odliczyć z paliwa do firmy?', a: 'Auto osobowe wykorzystywane częściowo prywatnie: 50% VAT (czyli ~11,5% z ceny brutto). Auto wykorzystywane wyłącznie do działalności (ciężarowe, dostawcze) lub w VAT pełnym: 100% VAT (23%).' },
+    { q: 'Co to jest kilometrówka 2026?', a: 'Stawka za 1 km przy używaniu prywatnego auta do celów służbowych. W 2026: 1,15 zł/km (samochody osobowe), 0,52 zł/km (motocykl). Maksymalnie 0,5358 PLN/km pełna refundacja bez podatku.' },
+    { q: 'Czy mogę wliczyć paliwo do PIT bez ewidencji?', a: 'Nie. PIT wymaga ewidencji przebiegu (data, cel, km, paliwo). Bez ewidencji - max 20% rzeczywistych kosztów paliwa. Z ewidencją - 100%.' },
+    { q: 'Paliwo dla pracownika - jak rozliczać?', a: 'Pracownik używający służbowego auta: nieodpłatne świadczenie 250 zł/miesiąc (auto do 1600 cm3) lub 400 zł/miesiąc (powyżej 1600 cm3) doliczane do PIT pracownika. Pracodawca odlicza VAT i koszt.' },
+    { q: 'Karta flotowa vs prywatna - co się opłaca firmie?', a: 'Karty flotowe (Orlen Fleet, BP Fuel Card, Shell euroShell) dają: faktury VAT z każdego tankowania (łatwiej księgować), rabaty 0,05-0,20 zł/l, jednoczesne tankowanie wielu aut. Opłaca się od 3+ aut firmowych.' },
+  ],
+  content: `
+## Paliwo w firmie - PIT i VAT 2026
+
+Rozliczanie paliwa w działalności gospodarczej zależy od typu pojazdu:
+
+### Auto osobowe (sedan, SUV, kombi)
+- **VAT:** 50% (~11,5% z ceny brutto)
+- **Koszty:** 100% (do limitu 75% przy aucie wykorzystywanym częściowo prywatnie)
+- **Wymagana ewidencja** kilometrów
+
+### Auto ciężarowe / dostawcze (do 3,5 t)
+- **VAT:** 100% (23%)
+- **Koszty:** 100%
+- **Bez limitu**
+
+### Auto prywatne do celów służbowych
+- **Kilometrówka 2026:** 1,15 zł/km (osobowe), 0,52 zł/km (motocykl)
+- **Refundacja bez PIT:** maks. 0,5358 zł/km dla samochodu osobowego
+- **Powyżej limitu** - obciążenie PIT pracownika
+
+## Ewidencja przebiegu - co musi zawierać
+
+| Element | Wymóg |
+|---|---|
+| Data | TAK |
+| Cel podróży | TAK (klient, dostawca, miasto) |
+| Trasa (skąd-dokąd) | TAK |
+| Liczba km | TAK |
+| Numer rejestracyjny | TAK |
+| Stan licznika | TAK |
+| Podpis kierowcy | TAK |
+
+**Bez ewidencji** US może uznać max 20% kosztów paliwa jako koszt firmy.
+
+## Karty flotowe - kiedy się opłacają
+
+Karta flotowa (Orlen Fleet, BP Fuel Card, Shell euroShell, Circle K Routex) jest opłacalna od **3+ aut firmowych**. Korzyści:
+
+- Jedna faktura VAT zbiorcza
+- Rabat 0,05-0,20 zł/l
+- Limity dzienne/miesięczne
+- Sprawozdania flotowe online
+
+[Karty paliwowe 2026](/aktualnosci/karty-paliwowe-orlen-vitay-bp-porownanie-2026/) | [Kalkulator paliwa](/kalkulator/)
+`,
+},
+
+'pb95-vs-pb98-do-mojego-auta': {
+  faqs: [
+    { q: 'Skąd wiem czy moje auto wymaga 95 czy 98?', a: 'Sprawdź naklejkę w wlewie paliwa - jest tam "RON 95" lub "RON 98 min." Drugie miejsce: instrukcja obsługi. Jeśli nie ma napisu, najczęściej wystarczy 95.' },
+    { q: 'Pomyłkowo zatankowałem 95 zamiast 98 - co robić?', a: 'Jedź łagodnie do najbliższej stacji i dotankuj 98. Pojedyncze zatankowanie nie zniszczy silnika, ale można usłyszeć "stukanie" (knocking). Długoterminowo szkodliwe.' },
+    { q: 'Czy 98 daje korzyść w aucie wymagającym 95?', a: 'Bardzo niewielką. Silnik nie wykorzysta wyższej oktanowej. Jedyna potencjalna korzyść: dodatkowe detergenty w paliwach premium (Shell V-Power, Orlen Verva). Cena 0,40 zł/l nadpłaty rzadko się opłaca.' },
+    { q: 'Czy 98 daje większą moc?', a: 'Tylko w silnikach zaprojektowanych na 98+. W aucie 95 - mocy nie przybędzie. W aucie 98 - silnik wykorzystuje wyższą oktanową i może produkować pełną moc fabryczną.' },
+    { q: 'Jakie marki aut wymagają PB98?', a: 'BMW M (M2, M3, M4, M5), Mercedes-AMG (A45, C63, E63, G63), Porsche (911, Boxster), Audi RS/S, Ford ST/RS, Honda Type R, Subaru WRX/STI, niektóre Audi 1.4 TSI sport.' },
+  ],
+  content: `
+## PB95 czy PB98 - jak wybrać
+
+Liczba oktanowa (RON - Research Octane Number) określa odporność benzyny na samozapłon. Im wyższa, tym wyższe sprężanie silnik może zastosować.
+
+**Reguła:** Tankuj benzynę o liczbie RON **równej lub wyższej** niż wymaga producent. Niższa = "stukanie" silnika i długoterminowe uszkodzenia.
+
+## Sprawdź swoją instrukcję
+
+W 90% aut benzynowych w Polsce wystarczy **PB95**. Wymóg PB98 mają głównie:
+
+- **Sportowe BMW M** - M2 Competition, M3, M4, M5, M8
+- **Mercedes-AMG** - A45, C63, E63, G63, GT
+- **Porsche** - wszystkie modele
+- **Audi RS / S** - RS3, RS4, RS6, S5, S6, S8
+- **Ford ST / RS** - Focus ST, Fiesta ST
+- **Honda Type R** - Civic Type R
+- **Subaru WRX / STI**
+- **Niektóre VAG 1.4 TSI sport** (Polo GTI, Fabia RS)
+
+## Pomyłkowe zatankowanie
+
+| Pomyłka | Co się stanie |
+|---|---|
+| 95 w aucie wymagającym 95 | ✅ Wszystko OK |
+| 98 w aucie wymagającym 95 | ✅ OK, brak korzyści |
+| **95 w aucie wymagającym 98** | ⚠ Stukanie silnika, ECU obniża moc, długoterminowo szkodzi |
+| 98 w aucie wymagającym 98 | ✅ Optymalna praca |
+
+**Pomyłkowe zatankowanie 95 zamiast 98:** Jedź łagodnie do następnej stacji, dotankuj 98. Pojedyncze zatankowanie nie zniszczy silnika.
+
+## Paliwa premium (V-Power, Verva, Ultimate)
+
+Warianty premium PB98 (Shell V-Power, Orlen Verva, BP Ultimate, Circle K miles) dodają **pakiet detergentów** czyszczących wtryskiwacze. Korzyść mierzalna głównie przy:
+
+- Starszych autach z osadami
+- Częstej jeździe miejskiej z krótkimi trasami
+- Silnikach z bezpośrednim wtryskiem (FSI, TSI)
+
+W normalnym użytkowaniu na trasie - korzyść znikoma.
+
+[Benzyna 95](/benzyna-95/) | [Benzyna 98](/benzyna-98/) | [Najtańsza Pb98](/najtansze-benzyna/)
+`,
+},
+
+'czy-orlen-ma-najtansze-paliwo-2026': {
+  faqs: [
+    { q: 'Czy Orlen jest najtańszą siecią w Polsce?', a: 'Nie. Średnie odchylenie cen Orlen vs średnia krajowa: +0,10 zł/l (lekko drożej). Najtańsze sieci: Moya (-0,15 zł), Huzar (-0,20 zł), stacje przy hipermarketach. Najdroższe: Shell (+0,35 zł), BP (+0,30 zł).' },
+    { q: 'Dlaczego Orlen nie jest najtańszy mimo że to państwowa firma?', a: 'Orlen to spółka giełdowa (Skarb Państwa ma 49,9%). Działa jak komercyjna firma maksymalizująca zysk. Ceny zbliżone do średniej dają najlepsze EBITDA z największej sieci 1850 stacji.' },
+    { q: 'Czy Orlen Vitay opłaca się?', a: 'Tak, jako dodatek do bazowej ceny. Rabat 0,05-0,15 zł/l. Ale nie warto przejeżdżać do Orlen jeśli inna stacja jest tańsza o 0,30 zł/l.' },
+    { q: 'Czy są regiony gdzie Orlen jest najtańszy?', a: 'Tak - na peryferiach (małe miejscowości) gdzie brak konkurencji. W dużych miastach Orlen ma cenę zbliżoną do średniej, a tańsze są Moya/Huzar/Auchan.' },
+    { q: 'Co to jest Verva i czy się opłaca?', a: 'Verva to premium paliwo Orlen (Pb98 i diesel premium). Dodatki detergentowe + wyższa liczba oktanowa/cetanowa. Cena: +0,40 zł/l. Opłaca się głównie dla silników wymagających 98+.' },
+  ],
+  content: `
+## Analiza: czy Orlen ma najtańsze paliwo?
+
+Orlen to największa polska sieć stacji paliw (~1850 stacji po fuzji z Lotosem). Naturalne pytanie: czy "polska" firma oferuje najniższe ceny dla polskich kierowców?
+
+**Krótka odpowiedź:** Nie. Orlen ma ceny **zbliżone do średniej krajowej** (~+0,10 zł/l), nie najtańsze.
+
+## Ranking sieci według odchylenia cenowego (Pb95)
+
+| Sieć | Odchylenie vs średnia | Pozycja |
+|---|---|---|
+| Huzar | **−0,20 zł/l** | 🥇 najtańsza |
+| Moya | **−0,15 zł/l** | 🥈 |
+| Hipermarket (Auchan, Makro) | **−0,10 zł/l** | 🥉 |
+| **Orlen/Lotos** | **+0,10 zł/l** | 4 |
+| Circle K | +0,25 zł/l | 5 |
+| BP | +0,30 zł/l | 6 |
+| Shell | +0,35 zł/l | 🚫 najdroższa |
+
+## Dlaczego Orlen nie jest najtańszy?
+
+1. **Spółka giełdowa** - maksymalizuje zysk dla akcjonariuszy (Skarb Państwa 49,9%, reszta giełda)
+2. **Premium lokalizacje** - autostrady, centra miast, główne trasy
+3. **Brak presji cenowej** - dominacja rynkowa (~38% stacji w Polsce)
+4. **Marketing premium** - Verva, programy lojalnościowe, kawiarnia, samochody do mycia
+
+## Strategia oszczędnościowa
+
+1. **Codzienne tankowanie:** Moya, Huzar, stacja przy hipermarkecie (oszczędność 0,20-0,40 zł/l)
+2. **Podróże dalekie:** Orlen po drodze (gęsta sieć, dobra jakość Verva)
+3. **Karta lojalnościowa:** Orlen Vitay daje 0,05-0,15 zł rabatu - dodaj do bazowej ceny
+
+## Werdykt
+
+**Orlen = solidna jakość za średnią cenę**, nie najtańszy. Dla najlepszych cen szukaj **Moya, Huzar** lub **stacji przy hipermarketach**.
+
+[Porównanie sieci](/marka/) | [Najtańsza Pb95](/najtansze-benzyna/)
+`,
+},
+
+'on-arktic-diesel-zimowy-2026': {
+  faqs: [
+    { q: 'Kiedy tankować ON Arktic?', a: 'Gdy prognoza pokazuje mróz poniżej -20°C (CFPP standardowego zimowego ON). W Polsce głównie w styczniu-lutym w Bieszczadach, Tatrach, Suwałkach. Wczesna tankowanie przed wyjazdem w góry.' },
+    { q: 'Czym ON Arktic różni się od standardowego zimowego diesla?', a: 'CFPP (Cold Filter Plugging Point) -32°C vs -20°C. Mniej parafin krystalizujących w mrozie. Wyższa cena: +0,10-0,30 zł/l vs zwykły zimowy ON.' },
+    { q: 'Czy mogę dolewać benzynę do diesla aby nie żelował?', a: 'NIE. Mit lat 90. Współczesne silniki z bezpośrednim wtryskiem ulegają zniszczeniu (~10-20 tys. zł naprawy). Zamiast tego: tankuj ON Arktic lub używaj dodatków antyżelujących (Bardahl, K2).' },
+    { q: 'Co zrobić jeśli diesel zżelował?', a: 'Wstaw auto do garażu/ogrzewanego miejsca. Po rozmrożeniu (kilkanaście godzin) wymień filtr paliwa, uruchom silnik. Nie próbuj startować na zewnątrz w mrozie - rozładujesz akumulator.' },
+    { q: 'Gdzie kupić ON Arktic?', a: 'Większe stacje Orlen, Lotos, Shell, BP w regionach górskich i północno-wschodnich (Bieszczady, Tatry, Suwałki). Sprawdź przed wyjazdem - nie każda stacja ma w ofercie.' },
+  ],
+  content: `
+## ON Arktic - diesel na ostre mrozy
+
+W Polsce standardowo dostępne są dwa typy diesla zimowego:
+
+| Typ | CFPP | Okres dostępności |
+|---|---|---|
+| Standardowy zimowy | -20°C | listopad-luty |
+| **ON Arktic** | **-32°C** | grudzień-luty (regiony górskie/PN-W) |
+
+**CFPP** (Cold Filter Plugging Point) = temperatura przy której parafiny krystalizują i blokują filtr paliwa.
+
+## Kiedy tankować Arktic?
+
+- **Mrozy poniżej -20°C** w prognozie
+- **Wyjazd w góry** (Tatry, Bieszczady, Beskidy)
+- **Mazury, Suwałki w styczniu/lutym**
+- **Parkowanie na zewnątrz** (nieogrzewany garaż = pełne ryzyko)
+
+## Jeśli mrozy przyszły niespodzianie
+
+1. **Tankuj jak najszybciej Arktic** (rozcieńczy zwykły ON w baku)
+2. **Dodatki antyżelujące** - K2, Bardahl, Wynn's (40-80 zł/butelka, do 60l ON)
+3. **Garaż / ogrzewany parking** na noc
+4. **NIE dolewaj benzyny** - zniszczy silnik (mit lat 90.)
+
+## Co zrobić gdy diesel zżelował
+
+| Krok | Czas |
+|---|---|
+| 1. Auto do garażu | 0 |
+| 2. Pełne rozmrożenie | 12-24 h |
+| 3. Wymiana filtra paliwa | 30 min |
+| 4. Start silnika | natychmiast |
+| 5. Dotankowanie Arktic | przy następnej stacji |
+
+Koszt naprawy: filtr paliwa 30-100 zł + ewentualne czyszczenie wtryskiwaczy (jeśli zatkane).
+
+[Olej napędowy](/olej-napedowy/) | [AdBlue - zamarza w -11°C](/adblue/)
+`,
+},
+
+'benzyna-e10-czy-niszczy-silnik': {
+  faqs: [
+    { q: 'Co to jest benzyna E10?', a: 'E10 to benzyna z dodatkiem do 10% bioetanolu (etanolu produkowanego z roślin). W Polsce od 2024 standard na większości stacji. Spełnia normę PN-EN 228:2012.' },
+    { q: 'Czy E10 jest niebezpieczna dla silnika?', a: 'Dla 90% aut polskich (rok 2000+) - nie. Dla starszych aut (1990-) lub niektórych modeli z bezpośrednim wtryskiem - może uszkodzić uszczelki paliwowe. Sprawdź naklejkę w wlewie lub instrukcję.' },
+    { q: 'Jak rozpoznać czy moje auto obsługuje E10?', a: 'Sprawdź naklejkę w wlewie paliwa: "E10" oznacza zgodność. Brak naklejki + auto sprzed 2000 = sprawdź instrukcję lub stronę producenta. Lista zgodnych aut: gov.pl/web/klimat.' },
+    { q: 'Gdzie kupić jeszcze E5?', a: 'E5 jest oferowana jako "Premium 95" lub "Protect 95" na większych stacjach (głównie Shell, BP, Verva 95 Orlen). Cena: +0,15-0,30 zł/l vs E10. Pełna lista stacji oferujących E5: rozporządzenie Ministerstwa Klimatu.' },
+    { q: 'Czy E10 daje większe zużycie?', a: 'Tak, o 1-3% (etanol ma niższą wartość kaloryczną niż benzyna). Auto które spala 7l/100km na E5, spali ~7,1-7,2 l/100km na E10. Różnica niewielka, w praktyce niezauważalna.' },
+  ],
+  content: `
+## Benzyna E10 - co to jest
+
+Od 2024 w Polsce większość stacji oferuje **E10** (do 10% bioetanolu) zamiast wcześniejszej **E5** (do 5%). To unijny wymóg ograniczenia emisji CO2 z transportu.
+
+## Czy uszkodzi mój silnik?
+
+| Wiek auta | Zgodność z E10 |
+|---|---|
+| 2011+ (wszystkie nowe) | ✅ 100% zgodne |
+| 2000-2010 | ✅ 95% zgodne |
+| 1990-2000 | ⚠ Sprawdź naklejkę / instrukcję |
+| Przed 1990 | ❌ Wymaga E5 |
+
+**Sprawdź naklejkę w wlewie:** "E10" oznacza zgodność. Brak = sprawdź instrukcję obsługi lub stronę producenta.
+
+## Modele wymagające E5 (lista częściowa)
+
+- Niektóre BMW lat 90 (E30, E36)
+- Mercedes W124, W201
+- VW Golf I, II, III (1.6, 1.8)
+- Audi 80, 100 (do 1995)
+- Klasyczne sportowe (Porsche 911 air-cooled, Ferrari)
+- Niektóre Subaru z fabrycznym LPG
+
+## Gdzie kupić E5
+
+E5 jest oferowana jako paliwo premium pod nazwami:
+- **Shell V-Power 95**
+- **BP Ultimate 95**
+- **Orlen Verva 95**
+- **Circle K miles 95**
+
+Cena: +0,15-0,30 zł/l vs zwykła E10. Pełna lista stacji: rozporządzenie Ministerstwa Klimatu (gov.pl/web/klimat).
+
+## Wpływ na auto
+
+- **Zużycie:** +1-3% (etanol = niższa wartość kaloryczna)
+- **Moc:** brak zmian
+- **Emisje:** -3% CO2 (cel ekologiczny)
+- **Uszczelki gumowe:** w starych autach mogą się rozpuszczać (od 1995+ uszczelki są E10-safe)
+
+**Wniosek:** Dla 90% kierowców w Polsce E10 to standard bez problemów. Jeśli masz wątpliwości - sprawdź naklejkę w wlewie.
+
+[Benzyna 95](/benzyna-95/) | [Benzyna 98](/benzyna-98/)
+`,
+},
+
+'stacje-samoobslugowe-vs-obslugowe-cena': {
+  faqs: [
+    { q: 'Czy stacje samoobsługowe są tańsze?', a: 'Tak, średnio o 0,10-0,30 zł/l. Mniej personelu = niższe koszty operacyjne, które przekładają się na cenę. Najtańsze samoobsługowe sieci: Moya, Auchan, niektóre Orlen "Stop Cafe".' },
+    { q: 'Czy stacje samoobsługowe są bezpieczne?', a: 'Tak. Procedura: wsuń kartę/wybierz stanowisko → wybierz paliwo → tankuj → kasa lub mobilna płatność. Wszystkie samoobsługowe stacje w Polsce są monitorowane CCTV.' },
+    { q: 'Jak korzystać ze stacji samoobsługowej?', a: '1) Włącz dystrybutor (kartą lub w kasie wybierz numer dystrybutora). 2) Wybierz paliwo. 3) Tankuj samodzielnie. 4) Zapłać kartą bezpośrednio w dystrybutorze lub idź do kasy/sklepu.' },
+    { q: 'Czy mogę zapłacić gotówką na stacji samoobsługowej?', a: 'Często tak, ale głównie w sklepie/kasie (nie w samym dystrybutorze). Niektóre stacje 24h przyjmują tylko karty po godz. 22:00.' },
+    { q: 'Czy moja karta lojalnościowa działa na samoobsługowej?', a: 'Zwykle tak. Po zatankowaniu zapłać w kasie, podaj kartę przed transakcją. Niektóre dystrybutory mają wbudowane czytniki karty lojalnościowej.' },
+  ],
+  content: `
+## Stacje samoobsługowe - tańsze i sprawniejsze
+
+W Polsce ok. 20% stacji oferuje samoobsługę. Trend rośnie - obniża koszty operacyjne i przyspiesza obsługę.
+
+## Najtańsze sieci samoobsługowe
+
+| Sieć | Charakterystyka | Cena vs średnia |
+|---|---|---|
+| **Moya** | Większość samoobsługowa | −0,15 zł/l |
+| **Auchan** | Wszystkie samoobsługowe | −0,10 zł/l |
+| **Makro** | Wszystkie samoobsługowe | −0,15 zł/l |
+| **Carrefour** | Większość samoobsługowa | −0,10 zł/l |
+| **E.Leclerc** | Wszystkie samoobsługowe | −0,10 zł/l |
+| **Niektóre Orlen Stop Cafe** | Hybryda | 0 do +0,05 zł/l |
+
+## Jak korzystać ze stacji samoobsługowej
+
+1. **Włącz dystrybutor:**
+   - Karta płatnicza w czytniku dystrybutora (najnowsze stacje)
+   - Lub: w kasie sklepu wybierz numer dystrybutora, zapłać zaliczkę
+2. **Wybierz paliwo:** Pb95 / Pb98 / ON / LPG
+3. **Tankuj samodzielnie** - dystrybutor zatrzyma się sam gdy bak będzie pełny
+4. **Płatność:** karta w dystrybutorze (różnica zwrotu od zaliczki) lub w kasie
+
+## Tipy
+
+- **Kasa = sklep** - możesz przy okazji zrobić zakupy
+- **Karty lojalnościowe** działają - zapłać w kasie i pokaż kartę
+- **24h** - po 22:00 niektóre stacje przyjmują tylko karty
+- **LPG** zawsze tankuje pracownik (przepisy bezpieczeństwa)
+- **Brak personelu = trudne pytania** (jakość paliwa, reklamacje) załatwisz tylko mailem/telefonicznie
+
+[Najtańsza Pb95](/najtansze-benzyna/) | [Marki stacji](/marka/)
+`,
+},
+
+'tankowanie-zima-porady-paliwa-mroz': {
+  faqs: [
+    { q: 'Jakie paliwo tankować zimą?', a: 'Diesel: zwykły zimowy (CFPP -20°C, dostępny XI-II) lub ON Arktic (-32°C, dla mrozów poniżej -20°C). Benzyna: zimowa ma niższą lotność (DVPE 60-90 kPa vs 45-60 letniej) - tankowana automatycznie listopad-luty.' },
+    { q: 'Czy benzyna może zamarznąć?', a: 'Praktycznie nie. Benzyna nie zamarza do ok. -100°C. Mogą jednak zamarznąć: woda w paliwie (1-3% kondensacji), filtr paliwa, czujnik poziomu. Tank pełny zimą = mniej kondensacji.' },
+    { q: 'AdBlue w mrozie - co zrobić?', a: 'AdBlue zamarza w -11°C. Auto ma ogrzewacz zbiornika i przewodów - działa automatycznie. Problemem są tylko kanistry zostawione na zewnątrz. Po rozmrożeniu AdBlue zachowuje właściwości.' },
+    { q: 'Czy zimą jest gorsze spalanie?', a: 'Tak, o 10-25%. Powody: gęstszy powietrze, zimny olej, dłuższe nagrzewanie silnika, ogrzewanie kabiny, oświetlenie cały czas. Krótkie trasy zimą = +30% zużycia.' },
+    { q: 'Diesel mrozem - kiedy zaczyna mieć problemy?', a: 'Standardowy zimowy ON (CFPP -20°C) zaczyna mieć problemy w -22°C i niżej. ON Arktic (-32°C) - bezpieczny do -34°C. Poniżej tych wartości: garaż lub ON Arktic + dodatki.' },
+  ],
+  content: `
+## Tankowanie zimą - 7 porad
+
+### 1. Tankuj pełny bak
+- Mniej miejsca dla kondensacji wody
+- Woda w paliwie + mróz = problem (zamarznięty filtr)
+- 100% bak vs 20% bak = 5× mniej powietrza w zbiorniku
+
+### 2. Sprawdzaj rodzaj diesla
+Listopad-luty stacje powinny oferować **zimowy ON (CFPP -20°C)**. Sprawdź naklejkę na dystrybutorze. Niektóre stacje przy granicy z PL/UA/BY mogą mieć letni ON nawet w styczniu - unikaj.
+
+### 3. Mrozy poniżej -20°C → ON Arktic
+Tankuj ON Arktic (CFPP -32°C) gdy:
+- Prognoza pokazuje mróz poniżej -20°C
+- Wyjazd w góry (Tatry, Bieszczady, Beskidy)
+- Mazury, Suwałki w styczniu/lutym
+- Auto na zewnątrz nocą
+
+Cena: +0,10-0,30 zł/l. Dostępność: większe Orlen, Lotos, Shell w regionach górskich.
+
+### 4. NIE dolewaj benzyny do diesla
+Mit lat 90. Współczesne silniki z bezpośrednim wtryskiem ulegają zniszczeniu (10-20 tys. zł naprawy). Zamiast tego:
+- **Dodatki antyżelujące** (K2, Bardahl, Wynn's) - 40-80 zł/butelka, do 60l ON
+- **ON Arktic** - bezpieczniejsze
+
+### 5. AdBlue zamarza w -11°C
+- Auto ma ogrzewacz zbiornika i przewodów (działa automatycznie)
+- Kanister AdBlue w bagażniku w mróz: rozmrożenie 12-24h
+- Po rozmrożeniu AdBlue zachowuje pełne właściwości
+
+### 6. Akumulator - sprawdź przed mrozami
+- W mrozie -20°C akumulator daje 50% pojemności
+- Stary akumulator = brak startu rano
+- Wymień jeśli ma 4+ lat lub start trwa >3 sekundy
+
+### 7. Spalanie zimą wyższe o 10-25%
+- Gęstsze powietrze
+- Zimny olej (wyższe tarcie)
+- Dłuższe nagrzewanie silnika (krótkie trasy = +30%)
+- Ogrzewanie kabiny, podgrzewanie szyb
+
+**Tip:** Używaj remote start (jeśli auto wspiera) - rozgrzeje silnik bez czekania w aucie.
+
+[Olej napędowy (Diesel)](/olej-napedowy/) | [AdBlue](/adblue/) | [Jak oszczędzać na paliwie](/aktualnosci/jak-oszczedzac-na-paliwie-10-sposobow/)
+`,
+},
+
 };
 
 // ── Strona artykułu ──────────────────────────────────────────────────────────
@@ -776,31 +1291,45 @@ export default async function ArticlePage({ params }: Props) {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         '@context': 'https://schema.org',
-        '@type': 'Article',
-        headline: post.title,
-        description: post.excerpt,
-        datePublished: post.date,
-        dateModified: post.date,
-        author: { '@type': 'Organization', name: 'BenzynaMAPA.pl', url: 'https://benzynamapa.pl' },
-        publisher: { '@type': 'Organization', name: 'BenzynaMAPA.pl', logo: { '@type': 'ImageObject', url: 'https://benzynamapa.pl/icon-512.png' } },
-        mainEntityOfPage: { '@type': 'WebPage', '@id': `https://benzynamapa.pl/aktualnosci/${slug}/` },
-        inLanguage: 'pl',
-      }) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
-        '@context': 'https://schema.org',
-        '@type': 'BreadcrumbList',
-        itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'BenzynaMAPA.pl', item: 'https://benzynamapa.pl/' },
-          { '@type': 'ListItem', position: 2, name: 'Aktualności', item: 'https://benzynamapa.pl/aktualnosci/' },
-          { '@type': 'ListItem', position: 3, name: post.title },
+        '@graph': [
+          // NewsArticle (silnější signál než Article pro Google News i AI Overviews)
+          {
+            '@type': 'NewsArticle',
+            headline: post.title,
+            description: post.excerpt,
+            datePublished: post.date,
+            dateModified: post.date,
+            author: { '@type': 'Organization', name: 'BenzynaMAPA.pl', url: 'https://benzynamapa.pl' },
+            publisher: {
+              '@type': 'Organization',
+              name: 'BenzynaMAPA.pl',
+              logo: { '@type': 'ImageObject', url: 'https://benzynamapa.pl/icon-512.png', width: 512, height: 512 },
+            },
+            mainEntityOfPage: { '@type': 'WebPage', '@id': `https://benzynamapa.pl/aktualnosci/${slug}/` },
+            inLanguage: 'pl',
+            articleSection: post.tag,
+            wordCount: article.content.split(/\s+/).length,
+            image: 'https://benzynamapa.pl/og-image.jpg',
+            speakable: { '@type': 'SpeakableSpecification', cssSelector: ['h1', '.article-excerpt', 'h2', '.faq-question'] },
+          },
+          // BreadcrumbList
+          {
+            '@type': 'BreadcrumbList',
+            itemListElement: [
+              { '@type': 'ListItem', position: 1, name: 'BenzynaMAPA.pl', item: 'https://benzynamapa.pl/' },
+              { '@type': 'ListItem', position: 2, name: 'Aktualności', item: 'https://benzynamapa.pl/aktualnosci/' },
+              { '@type': 'ListItem', position: 3, name: post.title },
+            ],
+          },
+          // FAQPage + Speakable
+          {
+            '@type': 'FAQPage',
+            mainEntity: article.faqs.map(({ q, a }) => ({
+              '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a },
+            })),
+            speakable: { '@type': 'SpeakableSpecification', cssSelector: ['.faq-question'] },
+          },
         ],
-      }) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
-        '@context': 'https://schema.org',
-        '@type': 'FAQPage',
-        mainEntity: article.faqs.map(({ q, a }) => ({
-          '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a },
-        })),
       }) }} />
 
       <div className="max-w-3xl mx-auto px-4 py-8">
@@ -831,7 +1360,7 @@ export default async function ArticlePage({ params }: Props) {
           <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-4 leading-tight">
             {post.title}
           </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-400 leading-relaxed border-l-4 border-green-500 pl-4">
+          <p className="article-excerpt text-lg text-gray-600 dark:text-gray-400 leading-relaxed border-l-4 border-green-500 pl-4">
             {post.excerpt}
           </p>
         </div>
@@ -847,7 +1376,7 @@ export default async function ArticlePage({ params }: Props) {
           <div className="space-y-3">
             {article.faqs.map(({ q, a }) => (
               <details key={q} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-                <summary className="font-semibold text-gray-900 dark:text-white cursor-pointer list-none flex justify-between items-center">
+                <summary className="faq-question font-semibold text-gray-900 dark:text-white cursor-pointer list-none flex justify-between items-center">
                   {q}
                   <span className="text-green-600 ml-3 flex-shrink-0 text-xs">▼</span>
                 </summary>

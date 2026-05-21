@@ -1,5 +1,7 @@
 import { getStationsByBrand, formatPrice, getBrandOffset, formatOffset, getBrandAvgPrice, getStats, slugify } from '@/lib/data';
-import { BRAND_PAGES, FUEL_LABELS, type FuelType } from '@/types';
+import { BRAND_PAGES, CITIES, FUEL_LABELS, type FuelType } from '@/types';
+
+const CITY_SLUG_SET = new Set(CITIES.map(c => c.slug));
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
@@ -202,15 +204,22 @@ export default async function BrandPage({ params }: { params: Promise<{ brand: s
         <section className="mb-10">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Stacje {brandPage.name} w największych miastach</h2>
           <div className="flex flex-wrap gap-2">
-            {cities.map(city => (
-              <Link
-                key={city}
-                href={`/miasto/${slugify(city)}/`}
-                className="px-3 py-1.5 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 hover:border-green-500 hover:text-green-700 dark:hover:text-green-400 transition-all"
-              >
-                {brandPage.name} {city}
-              </Link>
-            ))}
+            {cities.map(city => {
+              const citySlug = slugify(city);
+              // Pokud máme brand×city stránku (město je v CITIES) → linkujeme tam, jinak na stránku miasta
+              const href = CITY_SLUG_SET.has(citySlug)
+                ? `/marka/${brand}/${citySlug}/`
+                : `/miasto/${citySlug}/`;
+              return (
+                <Link
+                  key={city}
+                  href={href}
+                  className="px-3 py-1.5 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 hover:border-green-500 hover:text-green-700 dark:hover:text-green-400 transition-all"
+                >
+                  {brandPage.name} {city}
+                </Link>
+              );
+            })}
           </div>
         </section>
       )}

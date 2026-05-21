@@ -1,12 +1,12 @@
 import Link from 'next/link';
-import { Fuel, Map, TrendingDown, BarChart2, Calculator, BookOpen } from 'lucide-react';
+import { Fuel, Map, TrendingDown, BarChart2, Calculator, BookOpen, MapPin } from 'lucide-react';
 
 export default function Header() {
   return (
     <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 shadow-sm">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-14">
-          <Link href="/" className="flex items-center gap-2 group">
+          <Link href="/" className="flex items-center gap-2 group" aria-label="BenzynaMAPA - strona główna">
             <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center group-hover:bg-green-700 transition-colors">
               <Fuel size={16} className="text-white" />
             </div>
@@ -16,17 +16,17 @@ export default function Header() {
             </div>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className="hidden lg:flex items-center gap-1" aria-label="Główna nawigacja">
             {[
               { href: '/', label: 'Mapa', icon: Map },
               { href: '/najtansze-benzyna/', label: 'Benzyna 95', icon: TrendingDown },
               { href: '/najtansze-diesel/', label: 'Diesel', icon: TrendingDown },
               { href: '/najtansze-lpg/', label: 'LPG', icon: TrendingDown },
-              { href: '/marka/', label: 'Sieci stacji', icon: BarChart2 },
-              { href: '/historia-cen/', label: 'Historia cen', icon: BarChart2 },
+              { href: '/wojewodztwo/', label: 'Województwa', icon: MapPin },
+              { href: '/marka/', label: 'Sieci', icon: BarChart2 },
+              { href: '/historia-cen/', label: 'Historia', icon: BarChart2 },
               { href: '/kalkulator/', label: 'Kalkulator', icon: Calculator },
-              { href: '/benzyna-vs-diesel/', label: 'Benzyna vs diesel', icon: BookOpen },
-      { href: '/aktualnosci/', label: 'Aktualności', icon: BookOpen },
+              { href: '/aktualnosci/', label: 'Aktualności', icon: BookOpen },
             ].map(({ href, label, icon: Icon }) => (
               <Link
                 key={href}
@@ -39,12 +39,15 @@ export default function Header() {
             ))}
           </nav>
 
-          <div className="md:hidden flex items-center gap-2">
-            <Link href="/najtansze-diesel/" className="text-xs text-green-700 font-semibold bg-green-50 px-2 py-1 rounded-lg">
+          <div className="lg:hidden flex items-center gap-2">
+            <Link href="/najtansze-diesel/" className="text-xs text-green-700 font-semibold bg-green-50 dark:bg-gray-800 dark:text-green-400 px-2 py-1 rounded-lg">
               Diesel
             </Link>
-            <Link href="/najtansze-benzyna/" className="text-xs text-green-700 font-semibold bg-green-50 px-2 py-1 rounded-lg">
+            <Link href="/najtansze-benzyna/" className="text-xs text-green-700 font-semibold bg-green-50 dark:bg-gray-800 dark:text-green-400 px-2 py-1 rounded-lg">
               Benzyna
+            </Link>
+            <Link href="/wojewodztwo/" className="text-xs text-blue-700 font-semibold bg-blue-50 dark:bg-gray-800 dark:text-blue-400 px-2 py-1 rounded-lg">
+              Województwa
             </Link>
           </div>
         </div>

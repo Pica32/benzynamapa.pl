@@ -121,6 +121,24 @@ export default function NajtanszeBenzynaPage() {
           </p>
         )}
 
+        {/* AI Answer Box — strukturovaná odpověď pro AI Overviews / ChatGPT extraction */}
+        <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-gray-800 dark:to-gray-800 border-l-4 border-green-600 rounded-r-xl p-5 mb-6">
+          <h2 className="sr-only">Krótka odpowiedź</h2>
+          <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+            <strong>Najtańsza benzyna 95 w Polsce {date}:</strong>{' '}
+            {stations[0] && (
+              <>
+                <strong className="text-green-700 dark:text-green-400 text-lg">{formatPrice(stations[0].price!.pb95!)}</strong>
+                {' '}na stacji <strong>{stations[0].brand} {stations[0].name}</strong> w {stations[0].city}.{' '}
+              </>
+            )}
+            {avg && <>Średnia krajowa: <strong className="text-green-700 dark:text-green-400">{formatPrice(avg)}</strong>. </>}
+            Monitorujemy {stats?.total_stations.toLocaleString('pl') ?? '8 600'}+ stacji paliw,
+            aktualizujemy 3× dziennie. Najtańsze sieci: <strong>Moya</strong> (−0,15 zł/l),
+            <strong> Huzar</strong> (−0,20 zł/l), stacje przy hipermarketach.
+          </p>
+        </div>
+
         {/* Info box */}
         <div className="bg-blue-50 dark:bg-gray-800 border border-blue-200 dark:border-blue-900 rounded-xl p-4 mb-6 flex flex-wrap gap-6 items-center">
           <Info size={18} className="text-blue-600 dark:text-blue-400 flex-shrink-0" />

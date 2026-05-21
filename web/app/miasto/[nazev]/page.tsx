@@ -91,21 +91,72 @@ export default async function MiastoPage({ params }: Props) {
     { q: `Skąd pochodzi cena paliwa na BenzynaMAPA?`, a: `Ceny pobieramy automatycznie z polskich serwisów agregujących dane o paliwach i łączymy z bazą stacji z OpenStreetMap. Aktualizacja 3 razy dziennie. Stacje bez zgłoszonej ceny otrzymują szacunek na podstawie marki i średniej krajowej.` },
   ];
 
+  // ItemList nejlevnějších stanic (top 10 dle pb95) — pro Google rich results + AI
+  const top10ForList = [...allStations]
+    .filter(s => s.price?.pb95 != null)
+    .sort((a, b) => (a.price!.pb95 ?? 999) - (b.price!.pb95 ?? 999))
+    .slice(0, 10);
+
+  // Speakable highlights — voice search / AI assistants
+  const speakableSelectors = ['h1', '.faq-question', '.city-stats'];
+
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         '@context': 'https://schema.org',
-        '@type': 'BreadcrumbList',
-        itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'BenzynaMAPA.pl', item: 'https://benzynamapa.pl/' },
-          { '@type': 'ListItem', position: 2, name: 'Najtańsza benzyna', item: 'https://benzynamapa.pl/najtansze-benzyna/' },
-          { '@type': 'ListItem', position: 3, name: `Paliwa ${city.name}`, item: `https://benzynamapa.pl/miasto/${nazev}/` },
+        '@graph': [
+          // BreadcrumbList
+          {
+            '@type': 'BreadcrumbList',
+            itemListElement: [
+              { '@type': 'ListItem', position: 1, name: 'BenzynaMAPA.pl', item: 'https://benzynamapa.pl/' },
+              { '@type': 'ListItem', position: 2, name: 'Najtańsza benzyna', item: 'https://benzynamapa.pl/najtansze-benzyna/' },
+              { '@type': 'ListItem', position: 3, name: `Paliwa ${city.name}`, item: `https://benzynamapa.pl/miasto/${nazev}/` },
+            ],
+          },
+          // Place / City entity — Wikidata propojení pro Knowledge Graph
+          {
+            '@type': 'City',
+            '@id': `https://benzynamapa.pl/miasto/${nazev}/#City`,
+            name: city.name,
+            url: `https://benzynamapa.pl/miasto/${nazev}/`,
+            geo: { '@type': 'GeoCoordinates', latitude: city.lat, longitude: city.lng },
+            ...(city.wikidata ? { sameAs: `https://www.wikidata.org/wiki/${city.wikidata}` } : {}),
+            containedInPlace: city.region
+              ? { '@type': 'AdministrativeArea', name: city.region + ', Polska' }
+              : { '@type': 'Country', name: 'Polska', '@id': 'https://www.wikidata.org/wiki/Q36' },
+            ...(city.population ? { populationOf: city.population } : {}),
+          },
+          // ItemList nejlevnějších stanic (top 10 v daném městě)
+          {
+            '@type': 'ItemList',
+            name: `Najtańsze stacje paliw w ${city.name}`,
+            description: `Lista najtańszych stacji paliw w ${city.name} z aktualnymi cenami benzyny 95 i diesla`,
+            numberOfItems: top10ForList.length,
+            itemListElement: top10ForList.map((s, i) => ({
+              '@type': 'ListItem',
+              position: i + 1,
+              item: {
+                '@type': 'GasStation',
+                name: s.name,
+                address: { '@type': 'PostalAddress', streetAddress: s.address, addressLocality: s.city, addressCountry: 'PL' },
+                url: `https://benzynamapa.pl/stacja/${s.id}/`,
+                ...(s.price?.pb95 != null ? {
+                  makesOffer: {
+                    '@type': 'Offer', name: 'Benzyna 95', price: s.price.pb95,
+                    priceCurrency: 'PLN',
+                  },
+                } : {}),
+              },
+            })),
+          },
+          // FAQPage + Speakable (pro voice search a AI Overviews)
+          {
+            '@type': 'FAQPage',
+            mainEntity: faqs.map(({ q, a }) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })),
+            speakable: { '@type': 'SpeakableSpecification', cssSelector: speakableSelectors },
+          },
         ],
-      }) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
-        '@context': 'https://schema.org',
-        '@type': 'FAQPage',
-        mainEntity: faqs.map(({ q, a }) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })),
       }) }} />
 
       <div className="max-w-5xl mx-auto px-4 py-8">
@@ -131,7 +182,7 @@ export default async function MiastoPage({ params }: Props) {
 
         {/* Cenové statistiky */}
         {(avgPb95 || avgOn) && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+          <div className="city-stats grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
             {avgPb95 && (
               <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 text-center">
                 <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Benzyna 95 – średnia {city.name}</div>
@@ -249,7 +300,7 @@ export default async function MiastoPage({ params }: Props) {
           <div className="space-y-3">
             {faqs.map(({ q, a }) => (
               <details key={q} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-                <summary className="font-semibold text-gray-900 dark:text-white cursor-pointer list-none flex justify-between items-center">
+                <summary className="faq-question font-semibold text-gray-900 dark:text-white cursor-pointer list-none flex justify-between items-center">
                   {q}
                   <span className="text-green-600 ml-3 flex-shrink-0 text-xs">▼</span>
                 </summary>

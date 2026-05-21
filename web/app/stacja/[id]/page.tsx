@@ -1,8 +1,8 @@
-import { getStationById, getStations, getStationsWithPrices, formatPrice, slugify } from '@/lib/data';
+import { getStationById, getStations, getStationsWithPrices, getStationsByCity, formatPrice, slugify } from '@/lib/data';
 import { CITIES, FUEL_LABELS } from '@/types';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { MapPin, Clock, ChevronLeft, Navigation } from 'lucide-react';
+import { MapPin, Clock, ChevronLeft, Navigation, CheckCircle2, AlertCircle } from 'lucide-react';
 import GpsButtons from './GpsButtons';
 import StationMiniMap from '@/components/StationMiniMap';
 import ShareButtons from '@/components/ShareButtons';
@@ -74,6 +74,22 @@ export default async function StationPage({ params }: Props) {
   const lng = station.lng.toFixed(6);
   const citySlug = slugify(station.city);
   const cityExists = CITIES.some(c => c.slug === citySlug);
+  const hasRealPrice = station.price?.source === 'cenapaliw.pl';
+
+  // Cross-link na top stacje s ověřenou cenou ze stejného města (vzor z benzinmapa.cz)
+  // Zlepší interní prolinkování + SEO city/station authority + UX pro stránky bez real ceny
+  const nearbyWithRealPrice = cityExists
+    ? getStationsByCity(station.city)
+        .filter(s => s.id !== station.id)
+        .filter(s => s.price?.source === 'cenapaliw.pl')
+        .filter(s => s.price?.pb95 != null || s.price?.on != null)
+        .sort((a, b) => {
+          const pa = a.price?.pb95 ?? a.price?.on ?? Infinity;
+          const pb = b.price?.pb95 ?? b.price?.on ?? Infinity;
+          return pa - pb;
+        })
+        .slice(0, 5)
+    : [];
 
   const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
   const wazeUrl       = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
@@ -81,17 +97,71 @@ export default async function StationPage({ params }: Props) {
   const osmUrl        = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}&zoom=16`;
 
   const fuels = ['pb95', 'pb98', 'on', 'lpg'] as const;
+  const fuelOfferNames: Record<typeof fuels[number], string> = {
+    pb95: 'Benzyna 95 (Pb95)',
+    pb98: 'Benzyna 98 (Pb98)',
+    on:   'Olej napędowy (Diesel)',
+    lpg:  'LPG Autogaz',
+  };
+
+  // priceValidUntil: dle GitHub Actions ceny aktualizujeme 3× denně, takže max validita 8h od reportu
+  const priceValidUntil = hasRealPrice && station.price?.reported_at
+    ? new Date(new Date(station.price.reported_at).getTime() + 8 * 3600 * 1000).toISOString()
+    : new Date(Date.now() + 6 * 3600 * 1000).toISOString();
+
+  // Offers pro JSON-LD: pouze paliva s cenou + jen reálné ceny mají Offer (estimate by mohlo být nepřesné)
+  const offers = station.price && hasRealPrice
+    ? fuels
+        .filter(f => station.price![f] != null)
+        .map(f => ({
+          '@type': 'Offer',
+          name: fuelOfferNames[f],
+          itemOffered: { '@type': 'Product', name: fuelOfferNames[f] },
+          price: station.price![f],
+          priceCurrency: 'PLN',
+          priceValidUntil,
+          availability: 'https://schema.org/InStock',
+          url: `https://benzynamapa.pl/stacja/${id}/`,
+        }))
+    : [];
+
+  const aggregateOffer = offers.length > 0
+    ? {
+        '@type': 'AggregateOffer',
+        priceCurrency: 'PLN',
+        lowPrice: Math.min(...offers.map(o => o.price as number)),
+        highPrice: Math.max(...offers.map(o => o.price as number)),
+        offerCount: offers.length,
+        offers,
+      }
+    : null;
 
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         '@context': 'https://schema.org',
         '@type': 'GasStation',
+        '@id': `https://benzynamapa.pl/stacja/${id}/#GasStation`,
         name: station.name,
-        address: { '@type': 'PostalAddress', streetAddress: station.address, addressLocality: station.city, addressCountry: 'PL' },
+        brand: station.brand ? { '@type': 'Brand', name: station.brand } : undefined,
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: station.address,
+          addressLocality: station.city,
+          addressRegion: station.region,
+          addressCountry: 'PL',
+        },
         geo: { '@type': 'GeoCoordinates', latitude: station.lat, longitude: station.lng },
         url: `https://benzynamapa.pl/stacja/${id}/`,
         ...(station.opening_hours ? { openingHours: station.opening_hours } : {}),
+        amenityFeature: station.services.map(s => ({
+          '@type': 'LocationFeatureSpecification',
+          name: ({ lpg: 'LPG', adblue: 'AdBlue', car_wash: 'Myjnia', wc: 'WC', shop: 'Sklep' }[s] ?? s),
+          value: true,
+        })),
+        ...(aggregateOffer ? { makesOffer: aggregateOffer.offers, hasOfferCatalog: aggregateOffer } : {}),
+        // dateModified pomáhá AI/Google chápat čerstvost cen
+        ...(station.price?.reported_at ? { dateModified: station.price.reported_at } : {}),
       }) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         '@context': 'https://schema.org',
@@ -230,6 +300,84 @@ export default async function StationPage({ params }: Props) {
           <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Udostępnij tę stację</p>
           <ShareButtons url={`https://benzynamapa.pl/stacja/${id}/`} title={`${station.name} – ceny paliw | BenzynaMAPA.pl`} />
         </div>
+
+        {/* Pro stacje bez real ceny: výrazná CTA */}
+        {!hasRealPrice && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-5 mb-5">
+            <div className="flex items-start gap-3 mb-3">
+              <AlertCircle className="text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" size={20} />
+              <div>
+                <h2 className="text-base font-bold text-gray-900 dark:text-white mb-1">
+                  Cena na tej stacji nie jest jeszcze zweryfikowana
+                </h2>
+                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                  Dla stacji <strong>{station.name}</strong> w {station.city} jeszcze
+                  nikt nie zgłosił aktualnej ceny. Wyświetlany szacunek liczymy z krajowej
+                  średniej i typowego odchylenia cenowego sieci {station.brand}.
+                </p>
+                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mt-2">
+                  <strong>Wiesz, ile dziś kosztuje tu benzyna lub diesel?</strong>{' '}
+                  Wprowadź cenę powyżej (sekcja „Zgłoś cenę") i pomóż innym kierowcom w {station.city}.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Stacje s zweryfikowaną cenou v stejném městě – cross-linking + lokální SEO */}
+        {nearbyWithRealPrice.length > 0 && (
+          <section className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 mb-5 shadow-sm">
+            <h2 className="text-base font-bold text-gray-900 dark:text-white mb-1 flex items-center gap-2">
+              <CheckCircle2 className="text-green-600 dark:text-green-400" size={18} />
+              Stacje ze zweryfikowaną ceną w {station.city}
+            </h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+              {hasRealPrice
+                ? `Inne stacje paliw w ${station.city} z aktualną ceną zgłoszoną przez społeczność.`
+                : `Jeśli potrzebujesz zweryfikowanej ceny od razu, sprawdź najbliższe stacje w ${station.city} ze zgłoszonymi danymi.`}
+            </p>
+            <ul className="divide-y divide-gray-100 dark:divide-gray-700">
+              {nearbyWithRealPrice.map(s => {
+                const p95 = s.price?.pb95;
+                const pOn = s.price?.on;
+                return (
+                  <li key={s.id} className="py-3 first:pt-0 last:pb-0">
+                    <Link href={`/stacja/${s.id}/`} className="flex items-center justify-between gap-3 group">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/40 px-1.5 py-0.5 rounded">
+                            {s.brand}
+                          </span>
+                          <span className="text-sm font-semibold text-gray-900 dark:text-white truncate group-hover:text-green-700 dark:group-hover:text-green-400 transition-colors">
+                            {s.name}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{s.address}</p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        {p95 != null && (
+                          <div className="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap">
+                            {formatPrice(p95)} <span className="text-xs font-normal text-gray-500">Pb95</span>
+                          </div>
+                        )}
+                        {pOn != null && (
+                          <div className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                            {formatPrice(pOn)} <span className="text-[10px] text-gray-500">ON</span>
+                          </div>
+                        )}
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+            {cityExists && (
+              <Link href={`/miasto/${citySlug}/`} className="inline-flex items-center gap-1 mt-4 text-sm font-semibold text-green-700 dark:text-green-400 hover:underline">
+                Wszystkie stacje paliw w {station.city} →
+              </Link>
+            )}
+          </section>
+        )}
 
         {/* SEO text */}
         <section className="mt-2 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
