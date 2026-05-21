@@ -31,11 +31,11 @@ export default async function OG() {
           </div>
         </div>
 
-        <div style={{ fontSize: 64, fontWeight: 900, lineHeight: 1.1, marginBottom: 24 }}>
+        <div style={{ display: 'flex', fontSize: 64, fontWeight: 900, lineHeight: 1.1, marginBottom: 24 }}>
           Ceny paliw w Polsce
         </div>
-        <div style={{ fontSize: 32, opacity: 0.9, marginBottom: 40 }}>
-          {today} · {stats?.total_stations.toLocaleString('pl') ?? '8 600'}+ stacji
+        <div style={{ display: 'flex', fontSize: 32, opacity: 0.9, marginBottom: 40 }}>
+          {`${today} · ${stats?.total_stations.toLocaleString('pl') ?? '8 600'}+ stacji`}
         </div>
 
         {stats && (

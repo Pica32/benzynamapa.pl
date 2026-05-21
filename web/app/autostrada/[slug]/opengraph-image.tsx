@@ -38,12 +38,12 @@ export default async function OG({ params }: { params: { slug: string } }) {
           marginBottom: 16, alignSelf: 'flex-start', letterSpacing: 2,
         }}>{hwy.code}</div>
 
-        <div style={{ fontSize: 38, fontWeight: 700, lineHeight: 1.1, marginBottom: 8 }}>{hwy.name}</div>
-        <div style={{ fontSize: 22, opacity: 0.8 }}>
-          {hwy.from} → {hwy.to}
+        <div style={{ display: 'flex', fontSize: 38, fontWeight: 700, lineHeight: 1.1, marginBottom: 8 }}>{hwy.name}</div>
+        <div style={{ display: 'flex', fontSize: 22, opacity: 0.8 }}>
+          {`${hwy.from} → ${hwy.to}`}
         </div>
-        <div style={{ fontSize: 20, opacity: 0.7, marginTop: 4 }}>
-          {hwy.lengthKm} km · {hwy.cities.slice(0, 4).join(' · ')}
+        <div style={{ display: 'flex', fontSize: 20, opacity: 0.7, marginTop: 4 }}>
+          {`${hwy.lengthKm} km · ${hwy.cities.slice(0, 4).join(' · ')}`}
         </div>
 
         <div style={{ display: 'flex', gap: 30, marginTop: 'auto' }}>

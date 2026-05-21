@@ -46,10 +46,10 @@ export default async function OG({ params }: { params: { nazev: string } }) {
           </div>
         </div>
 
-        <div style={{ fontSize: 28, opacity: 0.8 }}>Najtańsza benzyna</div>
-        <div style={{ fontSize: 90, fontWeight: 900, lineHeight: 1, marginBottom: 8 }}>{city.name}</div>
-        <div style={{ fontSize: 24, opacity: 0.85 }}>
-          {stations.length} stacji paliw {city.region && `· ${city.region}`}
+        <div style={{ display: 'flex', fontSize: 28, opacity: 0.8 }}>Najtańsza benzyna</div>
+        <div style={{ display: 'flex', fontSize: 90, fontWeight: 900, lineHeight: 1, marginBottom: 8 }}>{city.name}</div>
+        <div style={{ display: 'flex', fontSize: 24, opacity: 0.85 }}>
+          {`${stations.length} stacji paliw${city.region ? ` · ${city.region}` : ''}`}
         </div>
 
         <div style={{ display: 'flex', gap: 30, marginTop: 'auto' }}>

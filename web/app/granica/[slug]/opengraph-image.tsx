@@ -45,12 +45,13 @@ export default async function OG({ params }: { params: { slug: string } }) {
           </div>
         </div>
 
-        <div style={{ fontSize: 28, opacity: 0.85, marginBottom: 4 }}>Granica z</div>
+        <div style={{ display: 'flex', fontSize: 28, opacity: 0.85, marginBottom: 4 }}>Granica z</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginBottom: 24 }}>
           <span style={{ fontSize: 110 }}>{border.flag}</span>
           <span style={{ fontSize: 86, fontWeight: 900, lineHeight: 1 }}>{border.country}</span>
         </div>
         <div style={{
+          display: 'flex',
           fontSize: 28, fontWeight: 700,
           background: 'rgba(255,255,255,0.2)', padding: '12px 24px', borderRadius: 12,
           alignSelf: 'flex-start',

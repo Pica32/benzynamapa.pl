@@ -45,11 +45,10 @@ export default async function OG({ params }: { params: { brand: string } }) {
           </div>
         </div>
 
-        <div style={{ fontSize: 28, opacity: 0.8 }}>Sieć stacji paliw</div>
-        <div style={{ fontSize: 100, fontWeight: 900, lineHeight: 1, marginBottom: 8 }}>{brand.name}</div>
-        <div style={{ fontSize: 22, opacity: 0.85 }}>
-          {brand.stationsCount ? `${brand.stationsCount.toLocaleString('pl')} stacji w Polsce` : ''}
-          {' · '}{brand.priceOffset} od średniej krajowej
+        <div style={{ display: 'flex', fontSize: 28, opacity: 0.8 }}>Sieć stacji paliw</div>
+        <div style={{ display: 'flex', fontSize: 100, fontWeight: 900, lineHeight: 1, marginBottom: 8 }}>{brand.name}</div>
+        <div style={{ display: 'flex', fontSize: 22, opacity: 0.85 }}>
+          {`${brand.stationsCount ? `${brand.stationsCount.toLocaleString('pl')} stacji w Polsce` : ''} · ${brand.priceOffset} od średniej krajowej`}
         </div>
 
         <div style={{ display: 'flex', gap: 30, marginTop: 'auto' }}>

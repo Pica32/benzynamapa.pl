@@ -32,10 +32,10 @@ export default async function OG({ params }: { params: { slug: string } }) {
           </div>
         </div>
 
-        <div style={{ fontSize: 28, opacity: 0.8 }}>Województwo</div>
-        <div style={{ fontSize: 90, fontWeight: 900, lineHeight: 1, marginBottom: 8 }}>{region.name}</div>
-        <div style={{ fontSize: 24, opacity: 0.85 }}>
-          Stolica: {region.capital} · {(region.population / 1000000).toFixed(1)} mln mieszkańców
+        <div style={{ display: 'flex', fontSize: 28, opacity: 0.8 }}>Województwo</div>
+        <div style={{ display: 'flex', fontSize: 90, fontWeight: 900, lineHeight: 1, marginBottom: 8 }}>{region.name}</div>
+        <div style={{ display: 'flex', fontSize: 24, opacity: 0.85 }}>
+          {`Stolica: ${region.capital} · ${(region.population / 1000000).toFixed(1)} mln mieszkańców`}
         </div>
 
         <div style={{ display: 'flex', gap: 30, marginTop: 'auto' }}>
