@@ -37,155 +37,145 @@ const COMPARE_SLUGS = [
 const BASE = 'https://benzynamapa.pl';
 
 /**
- * Sitemap split do 6 batches přes Next.js generateSitemaps:
- * - 0: Static + paliva (informativní stránky)
- * - 1: 165 měst
- * - 2: 16 vojvodství + 11 autostrad + 7 granic + 14 porovnání
- * - 3: 6 sieci + 990 marka×miasto + 96 marka×wojewodztwo
- * - 4: 19 blog článků
- * - 5: ~8 700 stanic
+ * Sitemap — jediná, ~11 067 URL.
+ *
+ * Předtím se používala generateSitemaps() (split do 6 batches /sitemap/0..5.xml),
+ * ale to negeneruje root /sitemap.xml. Robots.txt + Google očekávají /sitemap.xml.
+ *
+ * Google podporuje až 50 000 URL nebo 50 MB per sitemap — my pod limitem (~11k URL).
  */
-export async function generateSitemaps() {
-  return [
-    { id: 0 },
-    { id: 1 },
-    { id: 2 },
-    { id: 3 },
-    { id: 4 },
-    { id: 5 },
-  ];
-}
-
-export default async function sitemap({ id }: { id: number }): Promise<MetadataRoute.Sitemap> {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
-  switch (id) {
-    case 0: {
-      return [
-        { url: `${BASE}/`,                       changeFrequency: 'hourly',  priority: 1.0,  lastModified: now },
-        { url: `${BASE}/najtansze-benzyna/`,     changeFrequency: 'hourly',  priority: 0.9,  lastModified: now },
-        { url: `${BASE}/najtansze-diesel/`,      changeFrequency: 'hourly',  priority: 0.9,  lastModified: now },
-        { url: `${BASE}/najtansze-lpg/`,         changeFrequency: 'hourly',  priority: 0.85, lastModified: now },
-        { url: `${BASE}/historia-cen/`,          changeFrequency: 'daily',   priority: 0.8,  lastModified: now },
-        { url: `${BASE}/kalkulator/`,            changeFrequency: 'weekly',  priority: 0.7,  lastModified: now },
-        { url: `${BASE}/marka/`,                 changeFrequency: 'weekly',  priority: 0.8,  lastModified: now },
-        { url: `${BASE}/wojewodztwo/`,           changeFrequency: 'daily',   priority: 0.85, lastModified: now },
-        { url: `${BASE}/autostrada/`,            changeFrequency: 'weekly',  priority: 0.8,  lastModified: now },
-        { url: `${BASE}/granica/`,               changeFrequency: 'weekly',  priority: 0.75, lastModified: now },
-        { url: `${BASE}/api-docs/`,              changeFrequency: 'monthly', priority: 0.6,  lastModified: now },
-        { url: `${BASE}/porownanie/`,            changeFrequency: 'weekly',  priority: 0.75, lastModified: now },
-        { url: `${BASE}/benzyna-vs-diesel/`,     changeFrequency: 'monthly', priority: 0.75, lastModified: now },
-        { url: `${BASE}/aktualnosci/`,           changeFrequency: 'daily',   priority: 0.85, lastModified: now },
-        { url: `${BASE}/maksymalne-ceny-paliw/`, changeFrequency: 'monthly', priority: 0.8,  lastModified: now },
-        // Stránky pro paliva
-        { url: `${BASE}/benzyna-95/`,            changeFrequency: 'daily',   priority: 0.85, lastModified: now },
-        { url: `${BASE}/benzyna-98/`,            changeFrequency: 'daily',   priority: 0.8,  lastModified: now },
-        { url: `${BASE}/olej-napedowy/`,         changeFrequency: 'daily',   priority: 0.85, lastModified: now },
-        { url: `${BASE}/lpg/`,                   changeFrequency: 'daily',   priority: 0.85, lastModified: now },
-        { url: `${BASE}/adblue/`,                changeFrequency: 'weekly',  priority: 0.7,  lastModified: now },
-        { url: `${BASE}/stacje-ladowania-ev/`,   changeFrequency: 'weekly',  priority: 0.7,  lastModified: now },
-        // Informativní statické
-        { url: `${BASE}/o-nas/`,                 changeFrequency: 'monthly', priority: 0.5,  lastModified: now },
-        { url: `${BASE}/jak-dziala/`,            changeFrequency: 'monthly', priority: 0.6,  lastModified: now },
-        { url: `${BASE}/regulamin/`,             changeFrequency: 'yearly',  priority: 0.3,  lastModified: now },
-        { url: `${BASE}/cookies/`,               changeFrequency: 'yearly',  priority: 0.3,  lastModified: now },
-        { url: `${BASE}/polityka-prywatnosci/`,  changeFrequency: 'yearly',  priority: 0.3,  lastModified: now },
-        { url: `${BASE}/kontakt/`,               changeFrequency: 'monthly', priority: 0.5,  lastModified: now },
-      ];
-    }
+  // Statické routes
+  const staticRoutes: MetadataRoute.Sitemap = [
+    { url: `${BASE}/`,                       changeFrequency: 'hourly',  priority: 1.0,  lastModified: now },
+    { url: `${BASE}/najtansze-benzyna/`,     changeFrequency: 'hourly',  priority: 0.9,  lastModified: now },
+    { url: `${BASE}/najtansze-diesel/`,      changeFrequency: 'hourly',  priority: 0.9,  lastModified: now },
+    { url: `${BASE}/najtansze-lpg/`,         changeFrequency: 'hourly',  priority: 0.85, lastModified: now },
+    { url: `${BASE}/historia-cen/`,          changeFrequency: 'daily',   priority: 0.8,  lastModified: now },
+    { url: `${BASE}/kalkulator/`,            changeFrequency: 'weekly',  priority: 0.7,  lastModified: now },
+    { url: `${BASE}/marka/`,                 changeFrequency: 'weekly',  priority: 0.8,  lastModified: now },
+    { url: `${BASE}/wojewodztwo/`,           changeFrequency: 'daily',   priority: 0.85, lastModified: now },
+    { url: `${BASE}/autostrada/`,            changeFrequency: 'weekly',  priority: 0.8,  lastModified: now },
+    { url: `${BASE}/granica/`,               changeFrequency: 'weekly',  priority: 0.75, lastModified: now },
+    { url: `${BASE}/api-docs/`,              changeFrequency: 'monthly', priority: 0.6,  lastModified: now },
+    { url: `${BASE}/porownanie/`,            changeFrequency: 'weekly',  priority: 0.75, lastModified: now },
+    { url: `${BASE}/benzyna-vs-diesel/`,     changeFrequency: 'monthly', priority: 0.75, lastModified: now },
+    { url: `${BASE}/aktualnosci/`,           changeFrequency: 'daily',   priority: 0.85, lastModified: now },
+    { url: `${BASE}/maksymalne-ceny-paliw/`, changeFrequency: 'monthly', priority: 0.8,  lastModified: now },
+    // Stránky pro paliva
+    { url: `${BASE}/benzyna-95/`,            changeFrequency: 'daily',   priority: 0.85, lastModified: now },
+    { url: `${BASE}/benzyna-98/`,            changeFrequency: 'daily',   priority: 0.8,  lastModified: now },
+    { url: `${BASE}/olej-napedowy/`,         changeFrequency: 'daily',   priority: 0.85, lastModified: now },
+    { url: `${BASE}/lpg/`,                   changeFrequency: 'daily',   priority: 0.85, lastModified: now },
+    { url: `${BASE}/adblue/`,                changeFrequency: 'weekly',  priority: 0.7,  lastModified: now },
+    { url: `${BASE}/stacje-ladowania-ev/`,   changeFrequency: 'weekly',  priority: 0.7,  lastModified: now },
+    // Informativní statické
+    { url: `${BASE}/o-nas/`,                 changeFrequency: 'monthly', priority: 0.5,  lastModified: now },
+    { url: `${BASE}/jak-dziala/`,            changeFrequency: 'monthly', priority: 0.6,  lastModified: now },
+    { url: `${BASE}/regulamin/`,             changeFrequency: 'yearly',  priority: 0.3,  lastModified: now },
+    { url: `${BASE}/cookies/`,               changeFrequency: 'yearly',  priority: 0.3,  lastModified: now },
+    { url: `${BASE}/polityka-prywatnosci/`,  changeFrequency: 'yearly',  priority: 0.3,  lastModified: now },
+    { url: `${BASE}/kontakt/`,               changeFrequency: 'monthly', priority: 0.5,  lastModified: now },
+  ];
 
-    case 1: {
-      // 165 měst
-      return CITIES.map(c => ({
-        url: `${BASE}/miasto/${c.slug}/`,
-        changeFrequency: 'daily' as const,
-        priority: 0.85,
+  const cityRoutes: MetadataRoute.Sitemap = CITIES.map(c => ({
+    url: `${BASE}/miasto/${c.slug}/`,
+    changeFrequency: 'daily' as const,
+    priority: 0.85,
+    lastModified: now,
+  }));
+
+  const regionRoutes: MetadataRoute.Sitemap = REGIONS.map(r => ({
+    url: `${BASE}/wojewodztwo/${r.slug}/`,
+    changeFrequency: 'daily' as const,
+    priority: 0.8,
+    lastModified: now,
+  }));
+
+  const highwayRoutes: MetadataRoute.Sitemap = HIGHWAYS.map(h => ({
+    url: `${BASE}/autostrada/${h.slug}/`,
+    changeFrequency: 'daily' as const,
+    priority: 0.75,
+    lastModified: now,
+  }));
+
+  const borderRoutes: MetadataRoute.Sitemap = BORDERS.map(b => ({
+    url: `${BASE}/granica/${b.slug}/`,
+    changeFrequency: 'weekly' as const,
+    priority: 0.7,
+    lastModified: now,
+  }));
+
+  const compareRoutes: MetadataRoute.Sitemap = COMPARE_SLUGS.map(s => ({
+    url: `${BASE}/porownanie/${s}/`,
+    changeFrequency: 'monthly' as const,
+    priority: 0.65,
+    lastModified: now,
+  }));
+
+  const brandRoutes: MetadataRoute.Sitemap = BRAND_PAGES.map(b => ({
+    url: `${BASE}/marka/${b.slug}/`,
+    changeFrequency: 'daily' as const,
+    priority: 0.75,
+    lastModified: now,
+  }));
+
+  // Brand × City: 6 × 165 = ~990 URL
+  const brandCityRoutes: MetadataRoute.Sitemap = BRAND_PAGES.flatMap(b =>
+    CITIES.map(c => ({
+      url: `${BASE}/marka/${b.slug}/${c.slug}/`,
+      changeFrequency: 'daily' as const,
+      priority: 0.65,
+      lastModified: now,
+    }))
+  );
+
+  // Brand × Region: 6 × 16 = 96 URL
+  const brandRegionRoutes: MetadataRoute.Sitemap = BRAND_PAGES.flatMap(b =>
+    REGIONS.map(r => ({
+      url: `${BASE}/marka/${b.slug}/wojewodztwo/${r.slug}/`,
+      changeFrequency: 'daily' as const,
+      priority: 0.7,
+      lastModified: now,
+    }))
+  );
+
+  const blogRoutes: MetadataRoute.Sitemap = BLOG_SLUGS.map(slug => ({
+    url: `${BASE}/aktualnosci/${slug}/`,
+    changeFrequency: 'monthly' as const,
+    priority: 0.7,
+    lastModified: new Date('2026-05-18'),
+  }));
+
+  // ~8 700 stanic — hourly priority pro stanice s real cenou
+  let stationRoutes: MetadataRoute.Sitemap = [];
+  try {
+    const stations = getStationsWithPrices();
+    stationRoutes = stations
+      .filter(s => s.price?.pb95 != null || s.price?.on != null)
+      .map(s => ({
+        url: `${BASE}/stacja/${s.id}/`,
+        changeFrequency: 'hourly' as const,
+        priority: s.price?.source === 'cenapaliw.pl' ? 0.7 : 0.5,
         lastModified: now,
       }));
-    }
-
-    case 2: {
-      // 16 vojvodství + 11 autostrad + 7 granic + 14 porovnání
-      const regions: MetadataRoute.Sitemap = REGIONS.map(r => ({
-        url: `${BASE}/wojewodztwo/${r.slug}/`,
-        changeFrequency: 'daily' as const,
-        priority: 0.8,
-        lastModified: now,
-      }));
-      const highways: MetadataRoute.Sitemap = HIGHWAYS.map(h => ({
-        url: `${BASE}/autostrada/${h.slug}/`,
-        changeFrequency: 'daily' as const,
-        priority: 0.75,
-        lastModified: now,
-      }));
-      const borders: MetadataRoute.Sitemap = BORDERS.map(b => ({
-        url: `${BASE}/granica/${b.slug}/`,
-        changeFrequency: 'weekly' as const,
-        priority: 0.7,
-        lastModified: now,
-      }));
-      const compares: MetadataRoute.Sitemap = COMPARE_SLUGS.map(s => ({
-        url: `${BASE}/porownanie/${s}/`,
-        changeFrequency: 'monthly' as const,
-        priority: 0.65,
-        lastModified: now,
-      }));
-      return [...regions, ...highways, ...borders, ...compares];
-    }
-
-    case 3: {
-      // 6 sieci + 6×165 marka×miasto + 6×16 marka×wojewodztwo = 1092 URL
-      const brands: MetadataRoute.Sitemap = BRAND_PAGES.map(b => ({
-        url: `${BASE}/marka/${b.slug}/`,
-        changeFrequency: 'daily' as const,
-        priority: 0.75,
-        lastModified: now,
-      }));
-      const brandCity: MetadataRoute.Sitemap = BRAND_PAGES.flatMap(b =>
-        CITIES.map(c => ({
-          url: `${BASE}/marka/${b.slug}/${c.slug}/`,
-          changeFrequency: 'daily' as const,
-          priority: 0.65,
-          lastModified: now,
-        }))
-      );
-      const brandRegion: MetadataRoute.Sitemap = BRAND_PAGES.flatMap(b =>
-        REGIONS.map(r => ({
-          url: `${BASE}/marka/${b.slug}/wojewodztwo/${r.slug}/`,
-          changeFrequency: 'daily' as const,
-          priority: 0.7,
-          lastModified: now,
-        }))
-      );
-      return [...brands, ...brandCity, ...brandRegion];
-    }
-
-    case 4: {
-      return BLOG_SLUGS.map(slug => ({
-        url: `${BASE}/aktualnosci/${slug}/`,
-        changeFrequency: 'monthly' as const,
-        priority: 0.7,
-        lastModified: new Date('2026-05-07'),
-      }));
-    }
-
-    case 5: {
-      try {
-        const stations = getStationsWithPrices();
-        return stations
-          .filter(s => s.price?.pb95 != null || s.price?.on != null)
-          .map(s => ({
-            url: `${BASE}/stacja/${s.id}/`,
-            changeFrequency: 'hourly' as const,
-            priority: s.price?.source === 'cenapaliw.pl' ? 0.7 : 0.5,
-            lastModified: now,
-          }));
-      } catch {
-        return [];
-      }
-    }
-
-    default:
-      return [];
+  } catch {
+    // No stations data yet
   }
+
+  return [
+    ...staticRoutes,
+    ...cityRoutes,
+    ...regionRoutes,
+    ...highwayRoutes,
+    ...borderRoutes,
+    ...compareRoutes,
+    ...brandRoutes,
+    ...brandCityRoutes,
+    ...brandRegionRoutes,
+    ...blogRoutes,
+    ...stationRoutes,
+  ];
 }
