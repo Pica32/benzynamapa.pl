@@ -31,7 +31,7 @@ out center;'''
 GPS_CACHE    = os.path.join(os.path.dirname(__file__), 'gps_cache_pl.json')
 OUT_DIR      = os.path.join(os.path.dirname(__file__), '..', 'web', 'public', 'data')
 HISTORY_FILE = os.path.join(os.path.dirname(__file__), 'history_pl.json')
-CENAPALIW    = 'https://www.cenapaliw.pl'
+CENAPALIW    = 'https://cenapaliw.pl'  # POZOR: NE www.cenapaliw.pl — www redirektuje na homepage a ztrácí cestu
 EPETROL      = 'https://www.e-petrol.pl'
 
 H = {
@@ -196,9 +196,15 @@ def fetch_epetrol_averages() -> dict:
 
 # ── cenapaliw.pl scraper ───────────────────────────────────────────────────────
 
-def scrape_voivodeship(voiv: str, fuel_code: str, session: requests.Session) -> list:
-    """Stáhne ceny z jednoho województva a jednoho paliva."""
-    url = f'{CENAPALIW}/stationer/{fuel_code}/{voiv}/'
+def scrape_voivodeship_page(voiv: str, fuel_code: str, page: int, session: requests.Session) -> list:
+    """Stáhne ceny z jedné stránky vojvodství + paliva.
+
+    URL struktura cenapaliw.pl (od 2026-05):
+    - /stationer/{fuel_code}/{voiv}/wszystko/{page}  → konkrétní vojvodství, paginace
+    - /stationer/{fuel_code}/wszystko/wszystko/{page} → celá PL
+    Bez `/wszystko/{page}` na konci server vrací 301 redirect na homepage (top14).
+    """
+    url = f'{CENAPALIW}/stationer/{fuel_code}/{voiv}/wszystko/{page}'
     try:
         r = session.get(url, headers=H, timeout=25)
         if r.status_code != 200:
@@ -228,7 +234,7 @@ def scrape_voivodeship(voiv: str, fuel_code: str, session: requests.Session) -> 
             b_price = tds[1].select_one('b')
             price = parse_price_pln(b_price.get_text() if b_price else '')
 
-            # data-href pro identifikaci
+            # data-href pro identifikaci (cenapaliw URL slug stanice)
             href = row.get('data-href', '')
 
             if name and price:
@@ -239,41 +245,84 @@ def scrape_voivodeship(voiv: str, fuel_code: str, session: requests.Session) -> 
                 })
         return results
     except Exception as e:
-        print(f"  ✗ {voiv}/{fuel_code}: {e}")
+        print(f"  ✗ {voiv}/{fuel_code} page {page}: {e}")
         return []
+
+
+# Backward compat alias (pokud někde voláno bez page)
+def scrape_voivodeship(voiv: str, fuel_code: str, session: requests.Session) -> list:
+    return scrape_voivodeship_page(voiv, fuel_code, 0, session)
+
+
+# Maximum stránek per vojvodství × fuel (cenapaliw.pl má max ~15 stránek per vojvodství)
+MAX_PAGES_PER_VOIV = 20
 
 
 def scrape_all_prices() -> dict:
     """
     Vrací slovník: href → {name, city, address, pb95, pb98, on, lpg}.
-    Scrape pb95 z cenapaliw.pl per każde województwo (server vrací národní top14
-    pro /alla endpoint, tedy scrapujem po województwach pro lepší pokrytí).
+
+    Strategie 2026-05-20+: 4 paliva × 16 vojvodství × ~15 stránek = ~960 requestů.
+    Mezi requesty 0.3s pauza = ~5 minut celkem. Realistický počet: 800-2000 unikátních stanic
+    s reálnou cenou alespoň jednoho paliva.
+
+    Předtím: scrape_voivodeship('pb95', 'e95', ...) — bug, jen 3 stanice.
     """
-    print("Scrapuji ceny PB95 z cenapaliw.pl (16 województw)…")
+    print("Scrapuji ceny z cenapaliw.pl (16 vojvodství × 4 paliva × ~15 stránek)…")
     session = requests.Session()
     by_href: dict[str, dict] = {}
-    total = 0
+    counts = {'pb95': 0, 'pb98': 0, 'on': 0, 'lpg': 0}
 
-    for voiv in VOIVODESHIPS:
-        rows = scrape_voivodeship('pb95', 'e95', session)
-        for row_data in rows:
-            href = row_data['href'] or f"{row_data['name']}|{row_data['city']}"
-            # Validuj cenu pro pb95
-            pmin, pmax = PRICE_RANGE['pb95']
-            if not (pmin <= row_data['price'] <= pmax):
-                continue
-            if href not in by_href:
-                by_href[href] = {
-                    'name': row_data['name'], 'city': row_data['city'],
-                    'address': row_data['address'],
-                    'pb95': None, 'pb98': None, 'on': None, 'lpg': None,
-                }
-            if by_href[href]['pb95'] is None:
-                by_href[href]['pb95'] = row_data['price']
-                total += 1
-        time.sleep(0.5)
+    # cenapaliw fuel codes
+    fuel_map = [
+        ('pb95', 'e95'),  # 95 (E10)
+        ('pb98', 'e98'),  # 98 (E5)
+        ('on',   'on'),   # Diesel
+        ('lpg',  'lpg'),  # LPG
+    ]
 
-    print(f"  → Celkem {len(by_href)} unikátních stanic, {total} pb95 záznamů")
+    for fuel_key, fuel_code in fuel_map:
+        pmin, pmax = PRICE_RANGE[fuel_key]
+        print(f"  ── {fuel_key} ({fuel_code}) ──")
+        for voiv in VOIVODESHIPS:
+            voiv_count = 0
+            seen_in_voiv: set[str] = set()
+            for page in range(MAX_PAGES_PER_VOIV):
+                rows = scrape_voivodeship_page(voiv, fuel_code, page, session)
+                if not rows:
+                    break
+                new_in_page = 0
+                for row_data in rows:
+                    href = row_data['href'] or f"{row_data['name']}|{row_data['city']}"
+                    if href in seen_in_voiv:
+                        continue
+                    seen_in_voiv.add(href)
+
+                    # Validuj rozsah ceny
+                    if not (pmin <= row_data['price'] <= pmax):
+                        continue
+
+                    if href not in by_href:
+                        by_href[href] = {
+                            'name': row_data['name'], 'city': row_data['city'],
+                            'address': row_data['address'],
+                            'pb95': None, 'pb98': None, 'on': None, 'lpg': None,
+                        }
+                    if by_href[href][fuel_key] is None:
+                        by_href[href][fuel_key] = row_data['price']
+                        counts[fuel_key] += 1
+                        voiv_count += 1
+                        new_in_page += 1
+
+                # Pokud na stránce nepřišly nové stanice, končíme (rozsah vyčerpán)
+                if new_in_page == 0 and page > 0:
+                    break
+                time.sleep(0.3)
+            if voiv_count > 0:
+                print(f"    {voiv}: {voiv_count} cen")
+
+    print(f"  → Celkem {len(by_href)} unikátních stanic")
+    print(f"    Pb95: {counts['pb95']}, Pb98: {counts['pb98']}, ON: {counts['on']}, LPG: {counts['lpg']}")
     return by_href
 
 
@@ -426,8 +475,15 @@ def build_station_record(node: dict, prices: dict | None, now_iso: str, fallback
         pmin, pmax = PRICE_RANGE[fuel]
         if p is not None and pmin <= p <= pmax:
             return p  # reálná cena z cenapaliw
-        # Odhad
+        # Odhad — pokud base je nesmyslná (mimo range), použij FALLBACK_AVG
+        # Why: pokud scraper zachytí 1 corrupted real cenu (např. LPG 6.38 zł),
+        # avgs[fuel] se rovná té hodnotě a propíše se do všech 8 600 stanic.
+        if not (pmin <= base <= pmax):
+            base = FALLBACK_AVG[fuel]
         est = round_price(base + (offset if use_offset else 0.0))
+        # Sanity check estimate — pokud i s offsetem je mimo range, použij FALLBACK
+        if not (pmin <= est <= pmax):
+            est = FALLBACK_AVG[fuel]
         return est
 
     prices['pb95'] = fill('pb95', fallback_avgs['pb95'])
