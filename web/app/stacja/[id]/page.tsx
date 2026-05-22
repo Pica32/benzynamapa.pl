@@ -157,8 +157,8 @@ export default async function StationPage({ params }: Props) {
         url: `https://benzynamapa.pl/stacja/${id}/`,
         // hasMap = explicit link na mapu (GEO signál)
         hasMap: `https://www.openstreetmap.org/?mlat=${station.lat}&mlon=${station.lng}&zoom=16`,
-        // Strukturované opening hours (pokud 24/7 nebo "ověřte na místě")
-        ...(station.opening_hours ? { openingHoursSpecification: parseOpeningHours(station.opening_hours) } : {}),
+        // Opening hours - jednoduchý raw string (Schema.org openingHours podporuje "Mo-Su 00:00-24:00")
+        ...(station.opening_hours ? { openingHours: station.opening_hours } : {}),
         // Lat/lng v area served (GEO coverage signál)
         areaServed: {
           '@type': 'GeoCircle',

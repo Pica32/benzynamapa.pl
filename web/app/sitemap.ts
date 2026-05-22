@@ -61,6 +61,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/granica/`,               changeFrequency: 'weekly',  priority: 0.75, lastModified: now },
     { url: `${BASE}/api-docs/`,              changeFrequency: 'monthly', priority: 0.6,  lastModified: now },
     { url: `${BASE}/porownanie/`,            changeFrequency: 'weekly',  priority: 0.75, lastModified: now },
+    { url: `${BASE}/ceny-paliw-dzisiaj/`,    changeFrequency: 'hourly',  priority: 0.95, lastModified: now },
+    { url: `${BASE}/en/`,                    changeFrequency: 'daily',   priority: 0.6,  lastModified: now },
     { url: `${BASE}/benzyna-vs-diesel/`,     changeFrequency: 'monthly', priority: 0.75, lastModified: now },
     { url: `${BASE}/aktualnosci/`,           changeFrequency: 'daily',   priority: 0.85, lastModified: now },
     { url: `${BASE}/maksymalne-ceny-paliw/`, changeFrequency: 'monthly', priority: 0.8,  lastModified: now },
