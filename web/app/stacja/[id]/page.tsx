@@ -140,7 +140,9 @@ export default async function StationPage({ params }: Props) {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         '@context': 'https://schema.org',
-        '@type': 'GasStation',
+        // Multi-type: GasStation + LocalBusiness + AutomotiveBusiness
+        // → Google a AI rozpoznají všechny aspekty (mapa, ceny, recenze, otevírací doba)
+        '@type': ['GasStation', 'LocalBusiness', 'AutomotiveBusiness'],
         '@id': `https://benzynamapa.pl/stacja/${id}/#GasStation`,
         name: station.name,
         brand: station.brand ? { '@type': 'Brand', name: station.brand } : undefined,
@@ -153,15 +155,29 @@ export default async function StationPage({ params }: Props) {
         },
         geo: { '@type': 'GeoCoordinates', latitude: station.lat, longitude: station.lng },
         url: `https://benzynamapa.pl/stacja/${id}/`,
-        ...(station.opening_hours ? { openingHours: station.opening_hours } : {}),
+        // hasMap = explicit link na mapu (GEO signál)
+        hasMap: `https://www.openstreetmap.org/?mlat=${station.lat}&mlon=${station.lng}&zoom=16`,
+        // Strukturované opening hours (pokud 24/7 nebo "ověřte na místě")
+        ...(station.opening_hours ? { openingHoursSpecification: parseOpeningHours(station.opening_hours) } : {}),
+        // Lat/lng v area served (GEO coverage signál)
+        areaServed: {
+          '@type': 'GeoCircle',
+          geoMidpoint: { '@type': 'GeoCoordinates', latitude: station.lat, longitude: station.lng },
+          geoRadius: '5000',  // 5 km service area
+        },
         amenityFeature: station.services.map(s => ({
           '@type': 'LocationFeatureSpecification',
           name: ({ lpg: 'LPG', adblue: 'AdBlue', car_wash: 'Myjnia', wc: 'WC', shop: 'Sklep' }[s] ?? s),
           value: true,
         })),
+        // payment accepted (common for fuel stations)
+        paymentAccepted: 'Cash, Credit Card, Debit Card, BLIK',
+        currenciesAccepted: 'PLN',
         ...(aggregateOffer ? { makesOffer: aggregateOffer.offers, hasOfferCatalog: aggregateOffer } : {}),
         // dateModified pomáhá AI/Google chápat čerstvost cen
         ...(station.price?.reported_at ? { dateModified: station.price.reported_at } : {}),
+        // Potenciál pro reviews (až budou implementovány)
+        // aggregateRating: { '@type': 'AggregateRating', ratingValue: 4.5, reviewCount: 12 },
       }) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         '@context': 'https://schema.org',
