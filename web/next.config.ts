@@ -14,6 +14,16 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react', 'recharts'],
   },
+  // Rewrites pro /.well-known/* — Next.js ignoruje složky začínající tečkou,
+  // tedy reálné soubory jsou v app/well-known/* a tady mapujeme dot-prefixed cestu.
+  async rewrites() {
+    return [
+      { source: '/.well-known/llms.txt',       destination: '/well-known/llms.txt' },
+      { source: '/.well-known/ai-plugin.json', destination: '/well-known/ai-plugin.json' },
+      { source: '/.well-known/openapi.yaml',   destination: '/well-known/openapi.yaml' },
+      { source: '/.well-known/security.txt',   destination: '/well-known/security.txt' },
+    ];
+  },
   async redirects() {
     return [
       // www → non-www 301 redirect
