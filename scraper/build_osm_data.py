@@ -80,7 +80,7 @@ BRAND_OFFSET = {
 LPG_BRANDS = {'orlen', 'lotos', 'bp', 'moya', 'huzar', 'amic', 'circle k'}
 PREMIUM_BRANDS = {'shell', 'bp', 'circle k', 'orlen', 'neste'}
 
-FALLBACK_AVG = {'pb95': 6.38, 'on': 6.21, 'pb98': 6.82, 'lpg': 2.89}
+FALLBACK_AVG = {'pb95': 6.25, 'on': 7.10, 'pb98': 7.10, 'lpg': 3.30}  # aktualizováno 2026-05-21
 
 
 # ── helpers ────────────────────────────────────────────────────────────────────
@@ -163,35 +163,72 @@ def fetch_osm_stations() -> list:
 # ── e-petrol.pl — národní průměrné ceny ────────────────────────────────────────
 
 def fetch_epetrol_averages() -> dict:
-    """Stáhne národní průměrné ceny z e-petrol.pl (přesné průměry ON/LPG/PB98)."""
+    """Stáhne **národní + regionální** průměry z e-petrol.pl/notowania/rynek-krajowy/ceny-stacje-paliw.
+
+    Vrací: {
+      'national': {'pb95': 6.42, 'pb98': 6.97, 'on': 6.82, 'lpg': 3.68},
+      'regional': {'mazowieckie': {'pb95': 6.45, 'on': 6.80, 'lpg': 3.70}, ...}
+    }
+
+    e-petrol.pl aktualizuje národní průměry **denně** (lepší než nás 3×/den).
+    Regionální průměry **týdně** — perfektní pro brand-offset výpočty per region.
+    """
     try:
-        r = requests.get(f'{EPETROL}/ceny-paliw/srednie-ceny-paliw-w-polsce', headers=H, timeout=20)
+        r = requests.get(f'{EPETROL}/notowania/rynek-krajowy/ceny-stacje-paliw', headers=H, timeout=20)
         soup = BeautifulSoup(r.text, 'html.parser')
-        avgs = {}
-        # e-petrol.pl má tabulku nebo sekci s průměrnými cenami
-        for row in soup.select('table tr, .fuel-price-row, [class*=price-row]'):
-            text = row.get_text(' ', strip=True).lower()
-            for fuel, keywords in [
-                ('pb95', ['pb 95', 'e10', 'benzyna 95']),
-                ('pb98', ['pb 98', 'e5', 'benzyna 98']),
-                ('on',   ['olej nap', 'diesel', 'on ']),
-                ('lpg',  ['lpg', 'autogaz']),
-            ]:
-                if any(kw in text for kw in keywords):
-                    # Najdi číslo v řádku — cena PLN
-                    prices = re.findall(r'\b(\d+[.,]\d{2})\b', text)
-                    for p in prices:
-                        v = parse_price_pln(p)
+        result: dict = {'national': {}, 'regional': {}}
+
+        tables = soup.find_all('table')
+        if not tables:
+            return result
+
+        # PRIMARY (table 0): Pb98 Pb95 ON LPG headers, latest row je aktuální
+        for t in tables:
+            rows = t.find_all('tr')
+            if not rows:
+                continue
+            headers = [c.get_text(strip=True).lower() for c in rows[0].find_all(['th', 'td'])]
+            # Národní průměry: pb98 + pb95 + on + lpg
+            if all(h in headers for h in ['pb98', 'pb95', 'on', 'lpg']) and len(headers) <= 6:
+                if len(rows) >= 2:
+                    cells = [c.get_text(strip=True) for c in rows[1].find_all(['th', 'td'])]
+                    h2c = dict(zip(headers, cells))
+                    for fuel in ('pb95', 'pb98', 'on', 'lpg'):
+                        v = parse_price_pln(h2c.get(fuel, ''))
                         pmin, pmax = PRICE_RANGE.get(fuel, (1.0, 15.0))
                         if v and pmin <= v <= pmax:
-                            avgs[fuel] = v
-                            break
-        if avgs:
-            print(f"  → e-petrol.pl průměry: {avgs}")
-        return avgs
+                            result['national'][fuel] = v
+            # Regionální průměry: po sloupcích Aktualizacja|Województwo|Pb95|ON|LPG
+            elif 'województwo' in headers:
+                fuel_cols = {}
+                for i, h in enumerate(headers):
+                    if h in ('pb95', 'pb98', 'on', 'lpg'):
+                        fuel_cols[h] = i
+                voiv_col = headers.index('województwo') if 'województwo' in headers else None
+                if voiv_col is None:
+                    continue
+                for row in rows[1:]:
+                    cells = [c.get_text(strip=True) for c in row.find_all(['th', 'td'])]
+                    if len(cells) <= voiv_col:
+                        continue
+                    voiv_name = cells[voiv_col].lower()
+                    if voiv_name not in result['regional']:
+                        result['regional'][voiv_name] = {}
+                    for fuel, idx in fuel_cols.items():
+                        if idx < len(cells):
+                            v = parse_price_pln(cells[idx])
+                            pmin, pmax = PRICE_RANGE.get(fuel, (1.0, 15.0))
+                            if v and pmin <= v <= pmax:
+                                result['regional'][voiv_name][fuel] = v
+
+        if result['national']:
+            print(f"  → e-petrol.pl národní: {result['national']}")
+        if result['regional']:
+            print(f"  → e-petrol.pl regionální: {len(result['regional'])} vojvodství")
+        return result
     except Exception as e:
         print(f"  ✗ e-petrol.pl: {e}")
-        return {}
+        return {'national': {}, 'regional': {}}
 
 
 # ── cenapaliw.pl scraper ───────────────────────────────────────────────────────
@@ -205,10 +242,24 @@ def scrape_voivodeship_page(voiv: str, fuel_code: str, page: int, session: reque
     Bez `/wszystko/{page}` na konci server vrací 301 redirect na homepage (top14).
     """
     url = f'{CENAPALIW}/stationer/{fuel_code}/{voiv}/wszystko/{page}'
+    # Retry s exponential backoff (max 3 pokusy) — robust vs network glitches
+    last_err = None
+    for attempt in range(3):
+        try:
+            r = session.get(url, headers=H, timeout=25)
+            if r.status_code == 200:
+                break
+            if r.status_code in (429, 503):  # rate limit / overload
+                time.sleep(2 ** attempt)  # 1s, 2s, 4s
+                continue
+            return []  # 404, 5xx — neopakovat
+        except (requests.Timeout, requests.ConnectionError) as e:
+            last_err = e
+            time.sleep(2 ** attempt)
+    else:
+        print(f"  ✗ {voiv}/{fuel_code} page {page} 3× failed: {last_err}")
+        return []
     try:
-        r = session.get(url, headers=H, timeout=25)
-        if r.status_code != 200:
-            return []
         soup = BeautifulSoup(r.text, 'html.parser')
         results = []
 
@@ -257,18 +308,32 @@ def scrape_voivodeship(voiv: str, fuel_code: str, session: requests.Session) -> 
 # Maximum stránek per vojvodství × fuel (cenapaliw.pl má max ~15 stránek per vojvodství)
 MAX_PAGES_PER_VOIV = 20
 
+# Maximum stránek celostátně (cenapaliw.pl má max ~16 stránek pro `wszystko/wszystko`)
+MAX_PAGES_NATIONAL = 25
+
 
 def scrape_all_prices() -> dict:
     """
     Vrací slovník: href → {name, city, address, pb95, pb98, on, lpg}.
 
-    Strategie 2026-05-20+: 4 paliva × 16 vojvodství × ~15 stránek = ~960 requestů.
-    Mezi requesty 0.3s pauza = ~5 minut celkem. Realistický počet: 800-2000 unikátních stanic
-    s reálnou cenou alespoň jednoho paliva.
+    Strategie 2026-05-22+:
+    1. PRIMARY: celostátní endpoint /stationer/{fuel}/wszystko/wszystko/{page}
+       → ~210 unikátních stanic per palivo × 4 paliva = ~800 stanic celkem
+       → 4 paliva × ~20 stránek = ~80 requestů (rychlé)
+    2. SECONDARY: per-vojvodství pro dodatečné regionální stanice
+       → 4 × 16 × ~10 stránek = ~640 requestů
+       → typicky přidá dalších 100-200 stanic
 
-    Předtím: scrape_voivodeship('pb95', 'e95', ...) — bug, jen 3 stanice.
+    Celkem: ~1000+ unikátních stanic s reálnou cenou.
+    Doba běhu: ~5-7 minut s 0.3s pauzou mezi requesty.
+
+    Historie bugů (opraveno):
+    - 2026-05: Stará verze scrape_voivodeship('pb95', 'e95', ...) — bug,
+      arg prohozeny, jen 3 stanice
+    - 2026-05-20: www.cenapaliw.pl redirektoval na homepage, opraveno
+    - 2026-05-22: Přidán celostátní endpoint (7× víc stanic)
     """
-    print("Scrapuji ceny z cenapaliw.pl (16 vojvodství × 4 paliva × ~15 stránek)…")
+    print("Scrapuji ceny z cenapaliw.pl…")
     session = requests.Session()
     by_href: dict[str, dict] = {}
     counts = {'pb95': 0, 'pb98': 0, 'on': 0, 'lpg': 0}
@@ -281,47 +346,63 @@ def scrape_all_prices() -> dict:
         ('lpg',  'lpg'),  # LPG
     ]
 
+    def absorb(rows: list, fuel_key: str, pmin: float, pmax: float) -> int:
+        """Přidá řádky do by_href, vrátí počet nových cen."""
+        new = 0
+        for row_data in rows:
+            href = row_data['href'] or f"{row_data['name']}|{row_data['city']}"
+            if not (pmin <= row_data['price'] <= pmax):
+                continue
+            if href not in by_href:
+                by_href[href] = {
+                    'name': row_data['name'], 'city': row_data['city'],
+                    'address': row_data['address'],
+                    'pb95': None, 'pb98': None, 'on': None, 'lpg': None,
+                }
+            if by_href[href][fuel_key] is None:
+                by_href[href][fuel_key] = row_data['price']
+                counts[fuel_key] += 1
+                new += 1
+        return new
+
+    # PHASE 1: Celostátní endpoint (víc unikátních stanic)
+    print("  Phase 1: celostátní endpoint /wszystko/wszystko/...")
     for fuel_key, fuel_code in fuel_map:
         pmin, pmax = PRICE_RANGE[fuel_key]
-        print(f"  ── {fuel_key} ({fuel_code}) ──")
+        seen_in_fuel: set[str] = set()
+        national_new = 0
+        for page in range(MAX_PAGES_NATIONAL):
+            rows = scrape_voivodeship_page('wszystko', fuel_code, page, session)
+            if not rows:
+                break
+            new_hrefs = {(r['href'] or f"{r['name']}|{r['city']}") for r in rows} - seen_in_fuel
+            if not new_hrefs and page > 1:
+                break  # paginace vyčerpaná
+            seen_in_fuel |= {(r['href'] or f"{r['name']}|{r['city']}") for r in rows}
+            national_new += absorb(rows, fuel_key, pmin, pmax)
+            time.sleep(0.3)
+        print(f"    {fuel_key}: {national_new} cen z celostátního endpointu")
+
+    # PHASE 2: Per-vojvodství (pro dodatečné regionální pokrytí)
+    print("  Phase 2: per-vojvodství pro doplnění...")
+    for fuel_key, fuel_code in fuel_map:
+        pmin, pmax = PRICE_RANGE[fuel_key]
+        voiv_total = 0
         for voiv in VOIVODESHIPS:
-            voiv_count = 0
             seen_in_voiv: set[str] = set()
             for page in range(MAX_PAGES_PER_VOIV):
                 rows = scrape_voivodeship_page(voiv, fuel_code, page, session)
                 if not rows:
                     break
-                new_in_page = 0
-                for row_data in rows:
-                    href = row_data['href'] or f"{row_data['name']}|{row_data['city']}"
-                    if href in seen_in_voiv:
-                        continue
-                    seen_in_voiv.add(href)
-
-                    # Validuj rozsah ceny
-                    if not (pmin <= row_data['price'] <= pmax):
-                        continue
-
-                    if href not in by_href:
-                        by_href[href] = {
-                            'name': row_data['name'], 'city': row_data['city'],
-                            'address': row_data['address'],
-                            'pb95': None, 'pb98': None, 'on': None, 'lpg': None,
-                        }
-                    if by_href[href][fuel_key] is None:
-                        by_href[href][fuel_key] = row_data['price']
-                        counts[fuel_key] += 1
-                        voiv_count += 1
-                        new_in_page += 1
-
-                # Pokud na stránce nepřišly nové stanice, končíme (rozsah vyčerpán)
-                if new_in_page == 0 and page > 0:
+                new_hrefs = {(r['href'] or f"{r['name']}|{r['city']}") for r in rows} - seen_in_voiv
+                if not new_hrefs and page > 0:
                     break
+                seen_in_voiv |= {(r['href'] or f"{r['name']}|{r['city']}") for r in rows}
+                voiv_total += absorb(rows, fuel_key, pmin, pmax)
                 time.sleep(0.3)
-            if voiv_count > 0:
-                print(f"    {voiv}: {voiv_count} cen")
+        print(f"    {fuel_key}: +{voiv_total} cen z per-vojvodství")
 
-    print(f"  → Celkem {len(by_href)} unikátních stanic")
+    print(f"  → CELKEM {len(by_href)} unikátních stanic")
     print(f"    Pb95: {counts['pb95']}, Pb98: {counts['pb98']}, ON: {counts['on']}, LPG: {counts['lpg']}")
     return by_href
 
@@ -538,7 +619,30 @@ def compute_stats(prices_list: list, stations_list: list, now_iso: str) -> dict:
     def avg(lst):
         return round(sum(lst) / len(lst), 2) if lst else FALLBACK_AVG.get('pb95', 6.38)
 
-    avgs = {fuel: avg(real_vals(fuel)) or FALLBACK_AVG[fuel] for fuel in ('pb95', 'pb98', 'on', 'lpg')}
+    def median(lst):
+        """Median je odolnější vůči outlierům než průměr.
+        Why: 1 corrupted scrape (např. 6.38 zł LPG místo 2.89) by zkreslil průměr.
+        Median ignoruje extrémní hodnoty."""
+        if not lst:
+            return 0
+        s = sorted(lst)
+        n = len(s)
+        return round((s[n // 2] if n % 2 else (s[n // 2 - 1] + s[n // 2]) / 2), 2)
+
+    def robust_avg(fuel):
+        """Median místo průměru + sanity check vs FALLBACK_AVG (max ±35% odchylka)."""
+        vals = real_vals(fuel)
+        if not vals:
+            return FALLBACK_AVG[fuel]
+        med = median(vals)
+        fb = FALLBACK_AVG[fuel]
+        # Sanity check — pokud median >35% odchylka od fallback, máme bug nebo crash trhu
+        if abs(med - fb) / fb > 0.35:
+            print(f"  ⚠ Anomaly: {fuel} median {med:.2f} zł je >35% od fallback {fb:.2f} — používám fallback")
+            return fb
+        return med
+
+    avgs = {fuel: robust_avg(fuel) for fuel in ('pb95', 'pb98', 'on', 'lpg')}
 
     def cheapest(fuel):
         vals = [(p[fuel], p['station_id']) for p in prices_list if p.get(fuel) and p.get('source') == 'cenapaliw.pl']
@@ -661,10 +765,13 @@ def main():
         for k in fallback:
             if last.get(k):
                 fallback[k] = last[k]
-    # e-petrol přebije historické průměry
-    for k, v in epetrol_avgs.items():
+    # e-petrol národní průměry přebijou historické (denní aktualizace > naše)
+    nat = epetrol_avgs.get('national', {}) if isinstance(epetrol_avgs, dict) else {}
+    for k, v in nat.items():
         if v:
             fallback[k] = v
+    # e-petrol regionální průměry pro lepší odhad per vojvodství
+    regional_avgs = epetrol_avgs.get('regional', {}) if isinstance(epetrol_avgs, dict) else {}
 
     # 5. Sestavení výsledků
     stations_list, prices_list = [], []
