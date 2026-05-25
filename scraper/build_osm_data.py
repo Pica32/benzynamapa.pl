@@ -645,7 +645,12 @@ def compute_stats(prices_list: list, stations_list: list, now_iso: str) -> dict:
     avgs = {fuel: robust_avg(fuel) for fuel in ('pb95', 'pb98', 'on', 'lpg')}
 
     def cheapest(fuel):
-        vals = [(p[fuel], p['station_id']) for p in prices_list if p.get(fuel) and p.get('source') == 'cenapaliw.pl']
+        # Sanity: odmítni ceny <85 % průměru — extrémní outliery (např. cenapaliw chyba
+        # s PB95==ON==5.19 zł). Reálné akce/slevy nikdy nejdou pod ~15 % národního průměru.
+        avg_val = avgs.get(fuel) or FALLBACK_AVG.get(fuel, 0)
+        min_ok = avg_val * 0.85 if avg_val else 0
+        vals = [(p[fuel], p['station_id']) for p in prices_list
+                if p.get(fuel) and p.get('source') == 'cenapaliw.pl' and p[fuel] >= min_ok]
         if not vals:
             return {'price': FALLBACK_AVG.get(fuel, 0), 'station_id': '', 'city': ''}
         best = min(vals, key=lambda x: x[0])
