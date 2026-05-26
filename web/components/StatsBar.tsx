@@ -33,7 +33,7 @@ export default function StatsBar({ stats }: { stats: Stats }) {
                   <span className="text-green-200 text-xs">zł</span>
                   <TrendIcon value={item.trend} />
                   <span className={`text-xs ${item.trend < 0 ? 'text-green-400' : item.trend > 0 ? 'text-red-400' : 'text-gray-400'}`}>
-                    {item.trend > 0 ? '+' : ''}{item.trend.toFixed(2)} zł/7d
+                    {item.trend > 0 ? '+' : ''}{item.trend.toFixed(2).replace('.', ',')} zł/7d
                   </span>
                 </div>
               </div>

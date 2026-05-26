@@ -137,7 +137,7 @@ export default function NajtanszeDieselPage() {
         {stats?.trend_7d?.on != null && (
           <p className="text-sm mb-4 font-medium">
             <span className={stats.trend_7d.on >= 0 ? 'text-red-600' : 'text-green-600'}>
-              {stats.trend_7d.on >= 0 ? '▲' : '▼'} {Math.abs(stats.trend_7d.on).toFixed(2)} zł/l za ostatnie 7 dni
+              {stats.trend_7d.on >= 0 ? '▲' : '▼'} {Math.abs(stats.trend_7d.on).toFixed(2).replace('.', ',')} zł/l za ostatnie 7 dni
             </span>
           </p>
         )}

@@ -122,7 +122,7 @@ export default function OlejNapedowyPage() {
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
               <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Trend 7 dni</div>
               <div className={`text-2xl font-black ${(stats.trend_7d?.on ?? 0) >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-                {(stats.trend_7d?.on ?? 0) >= 0 ? '▲' : '▼'} {Math.abs(stats.trend_7d?.on ?? 0).toFixed(2)} zł
+                {(stats.trend_7d?.on ?? 0) >= 0 ? '▲' : '▼'} {Math.abs(stats.trend_7d?.on ?? 0).toFixed(2).replace('.', ',')} zł
               </div>
             </div>
             <Link href="/najtansze-diesel/" className="bg-gray-700 hover:bg-gray-800 text-white rounded-xl p-4 transition-colors text-center flex flex-col justify-center">

@@ -392,7 +392,7 @@ export default async function BrandCityPage({ params }: Props) {
             {' '}{brandPage.description}
           </p>
           <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-3">
-            W ${cityPage.name} działa łącznie <strong>{allCityStations.length} stacji paliw</strong> wszystkich sieci
+            W {cityPage.name} działa łącznie <strong>{allCityStations.length} stacji paliw</strong> wszystkich sieci
             i operatorów. Pełną mapę z cenami znajdziesz na{' '}
             <Link href={`/miasto/${city}/`} className="text-green-700 dark:text-green-400 hover:underline">stronie miasta {cityPage.name}</Link>.
           </p>

@@ -58,9 +58,12 @@ export default async function RegionPage({ params }: Props) {
   );
 
   const stats = getStats();
-  const pricesPb95 = allStations.map(s => s.price?.pb95).filter(Boolean) as number[];
-  const pricesOn = allStations.map(s => s.price?.on).filter(Boolean) as number[];
-  const pricesLpg = allStations.map(s => s.price?.lpg).filter(Boolean) as number[];
+  // Průměr regionu z REÁLNÝCH cen — odhady (estimate) jsou FALLBACK_AVG ± BRAND_OFFSET,
+  // tj. míchat by zkreslilo regionální průměr k národnímu.
+  const realInRegion = allStations.filter(s => s.price?.source === 'cenapaliw.pl');
+  const pricesPb95 = realInRegion.map(s => s.price?.pb95).filter(Boolean) as number[];
+  const pricesOn = realInRegion.map(s => s.price?.on).filter(Boolean) as number[];
+  const pricesLpg = realInRegion.map(s => s.price?.lpg).filter(Boolean) as number[];
 
   const avgPb95 = pricesPb95.length ? pricesPb95.reduce((a, b) => a + b, 0) / pricesPb95.length : null;
   const avgOn = pricesOn.length ? pricesOn.reduce((a, b) => a + b, 0) / pricesOn.length : null;

@@ -114,7 +114,7 @@ export default function CenyDzisiajPage() {
             <div className="text-xs text-gray-500 uppercase mb-1">Benzyna 95</div>
             <div className="text-3xl font-black text-green-700 dark:text-green-400">{formatPrice(stats.averages.pb95)}</div>
             <div className="text-xs mt-1 text-gray-500">
-              {trendIcon(trend.pb95 ?? 0)} {(trend.pb95 ?? 0).toFixed(2)} zł / 7 dni
+              {trendIcon(trend.pb95 ?? 0)} {((trend.pb95 ?? 0) > 0 ? '+' : '')}{(trend.pb95 ?? 0).toFixed(2).replace('.', ',')} zł / 7 dni
             </div>
           </div>
           {stats.averages.pb98 && (
@@ -127,14 +127,14 @@ export default function CenyDzisiajPage() {
             <div className="text-xs text-gray-500 uppercase mb-1">Diesel</div>
             <div className="text-3xl font-black text-gray-900 dark:text-white">{formatPrice(stats.averages.on)}</div>
             <div className="text-xs mt-1 text-gray-500">
-              {trendIcon(trend.on ?? 0)} {(trend.on ?? 0).toFixed(2)} zł / 7 dni
+              {trendIcon(trend.on ?? 0)} {((trend.on ?? 0) > 0 ? '+' : '')}{(trend.on ?? 0).toFixed(2).replace('.', ',')} zł / 7 dni
             </div>
           </div>
           <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl p-4 text-center">
             <div className="text-xs text-gray-500 uppercase mb-1">LPG</div>
             <div className="text-3xl font-black text-purple-700 dark:text-purple-400">{formatPrice(stats.averages.lpg)}</div>
             <div className="text-xs mt-1 text-gray-500">
-              {trendIcon(trend.lpg ?? 0)} {(trend.lpg ?? 0).toFixed(2)} zł / 7 dni
+              {trendIcon(trend.lpg ?? 0)} {((trend.lpg ?? 0) > 0 ? '+' : '')}{(trend.lpg ?? 0).toFixed(2).replace('.', ',')} zł / 7 dni
             </div>
           </div>
         </section>

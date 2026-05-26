@@ -60,8 +60,11 @@ export default async function HighwayPage({ params }: Props) {
   const allStations = getStationsWithPrices();
   // Stanice v BBox autostrady — heuristika, ne přesné, ale dostatečné pro long-tail SEO
   const stations = allStations.filter(s => inBbox(s.lat, s.lng, hwy.bbox));
-  const withPb95 = stations.filter(s => s.price?.pb95 != null);
-  const withOn   = stations.filter(s => s.price?.on != null);
+  // Pro průměry a ranking používáme jen reálné ceny — estimates podél autostrad
+  // (BBox zachytí celý region) by zkreslily výsledek k FALLBACK_AVG.
+  const realInBbox = stations.filter(s => s.price?.source === 'cenapaliw.pl');
+  const withPb95 = realInBbox.filter(s => s.price?.pb95 != null);
+  const withOn   = realInBbox.filter(s => s.price?.on != null);
 
   const avgPb95 = withPb95.length
     ? withPb95.reduce((a, s) => a + (s.price!.pb95 ?? 0), 0) / withPb95.length

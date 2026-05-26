@@ -65,9 +65,11 @@ export default async function MiastoPage({ params }: Props) {
   const stats = getStats();
   const today = new Date().toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
 
-  const allPrices = allStations.filter(s => s.price != null);
-  const pricesPb95  = allPrices.map(s => s.price?.pb95).filter(Boolean) as number[];
-  const pricesOn    = allPrices.map(s => s.price?.on).filter(Boolean) as number[];
+  // Jen reálné ceny (cenapaliw.pl) — odhady ostatních stanic = FALLBACK_AVG ± BRAND_OFFSET,
+  // takže míchat real + estimate by zkreslilo "průměr" + "najtańsza" města k národní střední.
+  const realPrices = allStations.filter(s => s.price?.source === 'cenapaliw.pl');
+  const pricesPb95  = realPrices.map(s => s.price?.pb95).filter(Boolean) as number[];
+  const pricesOn    = realPrices.map(s => s.price?.on).filter(Boolean) as number[];
 
   const avgPb95  = pricesPb95.length ? pricesPb95.reduce((a, b) => a + b, 0) / pricesPb95.length : null;
   const avgOn    = pricesOn.length   ? pricesOn.reduce((a, b) => a + b, 0)   / pricesOn.length   : null;
@@ -91,8 +93,10 @@ export default async function MiastoPage({ params }: Props) {
     { q: `Skąd pochodzi cena paliwa na BenzynaMAPA?`, a: `Ceny pobieramy automatycznie z polskich serwisów agregujących dane o paliwach i łączymy z bazą stacji z OpenStreetMap. Aktualizacja 3 razy dziennie. Stacje bez zgłoszonej ceny otrzymują szacunek na podstawie marki i średniej krajowej.` },
   ];
 
-  // ItemList nejlevnějších stanic (top 10 dle pb95) — pro Google rich results + AI
-  const top10ForList = [...allStations]
+  // ItemList nejlevnějších stanic (top 10 dle pb95) — pro Google rich results + AI.
+  // Jen reálné ceny: Google odmítá Offer s odhadovanou cenou jako rich result a v ItemList by
+  // se míchaly skutečné ceny s estimaty.
+  const top10ForList = [...realPrices]
     .filter(s => s.price?.pb95 != null)
     .sort((a, b) => (a.price!.pb95 ?? 999) - (b.price!.pb95 ?? 999))
     .slice(0, 10);
