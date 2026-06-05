@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { CITIES } from '@/types';
 import CheapestTable from '@/components/CheapestTable';
+import ReportCTA from '@/components/ReportCTA';
 import Link from 'next/link';
 import { MapPin, TrendingDown, Fuel } from 'lucide-react';
 
@@ -227,6 +228,9 @@ export default async function MiastoPage({ params }: Props) {
             <CheapestTable stations={allStations} fuelType="lpg" city={city.name} />
           )}
         </div>
+
+        {/* Gamifikovaná výzva — zapoj komunitu */}
+        <ReportCTA className="mb-8" />
 
         {/* Mapa */}
         <div className="bg-green-50 dark:bg-gray-800 rounded-2xl p-6 mb-8 border border-green-200 dark:border-gray-700">

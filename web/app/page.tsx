@@ -2,6 +2,7 @@ import { getStats, getCheapestStations, formatPrice, getBrandOffset, formatOffse
 import HomeClient from './HomeClient';
 import CheapestTable from '@/components/CheapestTable';
 import Top4Cheapest from '@/components/Top4Cheapest';
+import ReportCTA from '@/components/ReportCTA';
 import Link from 'next/link';
 import { CITIES } from '@/types';
 import type { Metadata } from 'next';
@@ -121,6 +122,8 @@ export default async function HomePage() {
       <HomeClient stats={stats} />
 
       <div className="max-w-7xl mx-auto px-4 py-12 space-y-16">
+
+        <ReportCTA />
 
         <div className="grid md:grid-cols-2 gap-8">
           <CheapestTable stations={cheapestDiesel}  fuelType="on"   />

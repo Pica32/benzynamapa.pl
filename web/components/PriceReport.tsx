@@ -3,7 +3,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { FUEL_LABELS, FuelType } from '@/types';
 import { Users, CheckCircle, Send, ChevronDown, ChevronUp, Flame, Trophy } from 'lucide-react';
 import {
-  loadGam, awardReport, awardConfirm, levelInfo, type GamState,
+  loadGam, awardReport, awardConfirm, levelInfo, dailyBonusAvailable,
+  type GamState, type Achievement,
 } from '@/lib/gamification';
 import { VERIFY_THRESHOLD } from '@/lib/priceModeration';
 
@@ -55,9 +56,11 @@ interface Props {
   forceOpen?: boolean;
   /** Aktuálně zobrazené ceny stanice — reference pro automatickou kontrolu + pre-fill. */
   referencePrice?: Partial<Record<FuelType, number>>;
+  /** Město stanice — pro odznak „ceny v N městech". */
+  city?: string;
 }
 
-export default function PriceReport({ stationId, initialFuel, forceOpen, referencePrice }: Props) {
+export default function PriceReport({ stationId, initialFuel, forceOpen, referencePrice, city }: Props) {
   const [subs, setSubs] = useState<UserSub[]>([]);
   const [confirmed, setConfirmed] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState(false);
@@ -67,6 +70,7 @@ export default function PriceReport({ stationId, initialFuel, forceOpen, referen
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [gam, setGam] = useState<GamState | null>(null);
   const [flash, setFlash] = useState<{ pts: number; level?: string } | null>(null);
+  const [badgePopup, setBadgePopup] = useState<Achievement | null>(null);
 
   const load = useCallback(async () => {
     const local = getLocalSubs(stationId);
@@ -98,6 +102,13 @@ export default function PriceReport({ stationId, initialFuel, forceOpen, referen
     return () => clearTimeout(t);
   }, [flash]);
 
+  // Auto-zhasnutí badge popupu
+  useEffect(() => {
+    if (!badgePopup) return;
+    const t = setTimeout(() => setBadgePopup(null), 6000);
+    return () => clearTimeout(t);
+  }, [badgePopup]);
+
   const verified = subs.filter(s => s.confirmations >= VERIFY_THRESHOLD);
   const lvl = gam ? levelInfo(gam.points) : null;
 
@@ -122,13 +133,16 @@ export default function PriceReport({ stationId, initialFuel, forceOpen, referen
     const data = await res.json();
     if (res.ok) {
       if (data.entry) saveLocalSub(stationId, data.entry);
-      const r = awardReport();
+      const r = awardReport(city);
       setGam(r.state);
       setFlash({ pts: r.earned, level: r.leveledUp?.name });
+      if (r.newBadges.length) setBadgePopup(r.newBadges[0]);
+      const bonusNote = r.dailyBonus ? ` (+${r.dailyBonus} bonus dzienny!)` : '';
       setMsg({
-        text: data.autoVerified
-          ? 'Cena potwierdzona automatycznie ✓ Dzięki! 🎉'
-          : 'Cena zgłoszona — czeka na potwierdzenie. Dzięki! 🎉',
+        text: (data.autoVerified
+          ? 'Cena potwierdzona automatycznie ✓ '
+          : 'Cena zgłoszona — czeka na potwierdzenie. ')
+          + `+${r.earned} pkt${bonusNote} 🎉`,
         ok: true,
       });
       load();
@@ -152,6 +166,7 @@ export default function PriceReport({ stationId, initialFuel, forceOpen, referen
       const r = awardConfirm();
       setGam(r.state);
       setFlash({ pts: r.earned, level: r.leveledUp?.name });
+      if (r.newBadges.length) setBadgePopup(r.newBadges[0]);
       load();
     } else {
       const d = await res.json();
@@ -168,6 +183,22 @@ export default function PriceReport({ stationId, initialFuel, forceOpen, referen
             +{flash.pts} pkt{flash.level ? ` · ${flash.level}!` : ''}
           </div>
         </div>
+      )}
+
+      {/* Odemčený odznak — velká oslava */}
+      {badgePopup && (
+        <button
+          onClick={() => setBadgePopup(null)}
+          className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in"
+        >
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border-2 border-yellow-400 shadow-2xl px-6 py-5 text-center max-w-[260px] animate-bounce">
+            <div className="text-5xl mb-2">{badgePopup.icon}</div>
+            <div className="text-[10px] font-bold text-yellow-600 uppercase tracking-widest mb-1">Nowa odznaka!</div>
+            <div className="text-lg font-black text-gray-900 dark:text-white">{badgePopup.name}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{badgePopup.desc}</div>
+            <div className="mt-2 text-sm font-bold text-green-600">+25 pkt 🎉</div>
+          </div>
+        </button>
       )}
 
       {verified.length > 0 && (
@@ -223,9 +254,12 @@ export default function PriceReport({ stationId, initialFuel, forceOpen, referen
                 <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${Math.round(lvl.progress * 100)}%` }} />
               </div>
               <div className="flex justify-between mt-1 text-[10px] text-gray-500 dark:text-gray-400">
-                <span>{gam!.reports} zgłoszeń · {gam!.confirms} potwierdzeń</span>
+                <span>{gam!.reports} zgłoszeń · {gam!.confirms} potwierdzeń · {gam!.badges.length} odznak</span>
                 {lvl.next ? <span className="flex items-center gap-1"><Trophy size={10} /> {lvl.toNext} pkt do: {lvl.next.name}</span> : <span>Maks. ranga! 🏆</span>}
               </div>
+              <a href="/profil/" className="mt-2 block text-center text-[11px] font-semibold text-green-700 dark:text-green-400 hover:underline">
+                Mój profil i odznaki →
+              </a>
             </div>
           )}
 
@@ -234,6 +268,11 @@ export default function PriceReport({ stationId, initialFuel, forceOpen, referen
               Znasz aktualną cenę? Zgłoś ją w kilka sekund —{' '}
               <strong className="text-green-700 dark:text-green-400">+10 pkt</strong> i pomagasz innym kierowcom.
             </p>
+            {gam && dailyBonusAvailable(gam) && (
+              <p className="text-xs mb-3 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 font-semibold flex items-center gap-1.5">
+                🎁 Bonus dzienny: pierwsze zgłoszenie dziś = <strong>+{10} pkt ekstra!</strong>
+              </p>
+            )}
             <div className="flex gap-2 flex-wrap mb-3">
               {FUEL_ORDER.map(f => (
                 <button key={f} type="button" onClick={() => setFormFuel(f)}

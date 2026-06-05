@@ -583,7 +583,39 @@ def detect_brand(tags: dict) -> str:
     return 'Stacja paliw'
 
 
-def build_station_record(node: dict, prices: dict | None, now_iso: str, fallback_avgs: dict):
+def compute_regional_offsets(regional_avgs: dict) -> dict:
+    """Z e-petrol regionálních průměrů spočítá RELATIVNÍ odchylku regionu od
+    průměru všech regionů (per palivo).
+
+    Proč relativní: e-petrol regionální tabulka má absolutní hladinu nekonzistentní
+    s národní (~+0,8 zł výš — jiná metrika), ALE rozdíly MEZI regiony jsou reálný
+    signál (Mazowieckie dráž, Łódzkie levněji). Aplikujeme tedy jen odchylku od
+    regionálního průměru na národní základ → reálná regionální variace bez inflace.
+
+    Vrací {region_normalized: {fuel: offset}}, offset capnutý na ±0,30 zł.
+    """
+    if not regional_avgs:
+        return {}
+    fuels = ('pb95', 'pb98', 'on', 'lpg')
+    means = {}
+    for f in fuels:
+        vals = [v[f] for v in regional_avgs.values() if v.get(f)]
+        if vals:
+            means[f] = sum(vals) / len(vals)
+    out: dict = {}
+    for region, v in regional_avgs.items():
+        rn = normalize(region)
+        ro: dict = {}
+        for f in fuels:
+            if v.get(f) and f in means:
+                ro[f] = round(max(-0.30, min(0.30, v[f] - means[f])), 2)
+        if ro:
+            out[rn] = ro
+    return out
+
+
+def build_station_record(node: dict, prices: dict | None, now_iso: str, fallback_avgs: dict,
+                         regional_offsets: dict | None = None, region_name: str = ''):
     tags = node.get('tags', {})
     osm_id = str(node['id'])
     brand = detect_brand(tags)
@@ -601,6 +633,11 @@ def build_station_record(node: dict, prices: dict | None, now_iso: str, fallback
     else:
         source = 'cenapaliw.pl'
 
+    # Regionální odchylka (relativní, na národní základ) — reálná regionální variace
+    reg_off = {}
+    if regional_offsets and region_name:
+        reg_off = regional_offsets.get(normalize(region_name), {})
+
     # Doplň chybějící paliva odhadem — validuj rozsah ceny
     def fill(fuel: str, base: float, use_offset: bool = True) -> float | None:
         p = prices.get(fuel)
@@ -612,7 +649,11 @@ def build_station_record(node: dict, prices: dict | None, now_iso: str, fallback
         # avgs[fuel] se rovná té hodnotě a propíše se do všech 8 600 stanic.
         if not (pmin <= base <= pmax):
             base = FALLBACK_AVG[fuel]
-        est = round_price(base + (offset if use_offset else 0.0))
+        # Regionální posun základu (Mazowieckie +, Łódzkie − …)
+        regional_base = base + reg_off.get(fuel, 0.0)
+        if not (pmin <= regional_base <= pmax):
+            regional_base = base
+        est = round_price(regional_base + (offset if use_offset else 0.0))
         # Sanity check estimate — pokud i s offsetem je mimo range, použij FALLBACK
         if not (pmin <= est <= pmax):
             est = FALLBACK_AVG[fuel]
@@ -661,19 +702,22 @@ def build_station_record(node: dict, prices: dict | None, now_iso: str, fallback
     return station, price_rec
 
 
-def build_standalone_record(sc: dict, now_iso: str, fallback_avgs: dict):
+def build_standalone_record(sc: dict, now_iso: str, fallback_avgs: dict,
+                            regional_offsets: dict | None = None):
     """Stanice z cenapaliw, která nemá partnera v OSM → přidá se jako samostatná.
     id má prefix 'cp_' (vs 'pl_' u OSM).
       - má reálnou cenu → source='cenapaliw.pl', zobrazí reálné ceny
-      - bez ceny → source='estimate', dopočítá odhad (značka + národní průměr) —
-        STEJNOU metodikou jako OSM stanice (build_station_record), aby odhady
-        ve stejném městě nebyly nekonzistentní."""
+      - bez ceny → source='estimate', dopočítá odhad (značka + národní průměr +
+        regionální odchylka) — STEJNOU metodikou jako OSM stanice."""
     brand = sc.get('name') or 'Stacja paliw'
     brand_key = brand.lower()
     sid = f"cp_{sc['cp_id']}"
     has_real = any(sc.get(f) is not None for f in ('pb95', 'pb98', 'on', 'lpg'))
 
     avgs = dict(fallback_avgs)  # národní průměry (jako OSM odhady)
+    reg_off = {}
+    if regional_offsets and sc.get('county'):
+        reg_off = regional_offsets.get(normalize(sc['county']), {})
 
     offset = 0.0
     for k, v in BRAND_OFFSET.items():
@@ -686,6 +730,9 @@ def build_standalone_record(sc: dict, now_iso: str, fallback_avgs: dict):
         base = avgs.get(fuel, FALLBACK_AVG[fuel])
         if not (pmin <= base <= pmax):
             base = FALLBACK_AVG[fuel]
+        base += reg_off.get(fuel, 0.0)  # regionální posun
+        if not (pmin <= base <= pmax):
+            base = avgs.get(fuel, FALLBACK_AVG[fuel])
         v = round_price(base + (offset if use_offset else 0.0))
         return v if pmin <= v <= pmax else FALLBACK_AVG[fuel]
 
@@ -906,17 +953,23 @@ def main():
     for k, v in nat.items():
         if v:
             fallback[k] = v
-    # e-petrol regionální průměry pro lepší odhad per vojvodství
+    # e-petrol regionální průměry → relativní regionální odchylky (přesnější odhady)
     regional_avgs = epetrol_avgs.get('regional', {}) if isinstance(epetrol_avgs, dict) else {}
+    regional_offsets = compute_regional_offsets(regional_avgs)
+    if regional_offsets:
+        print(f"  → Regionální odchylky pro {len(regional_offsets)} vojvodství (přesnější odhady)")
 
     # 5. Sestavení výsledků
     stations_list, prices_list = [], []
     enriched_count = 0
     for node in osm_nodes:
         prices = price_map.get(node['id'])
-        s, p = build_station_record(node, prices, now_iso, fallback)
+        # Region pro regionální odhad: OSM tag → enrichment z cenapaliw
+        enr = enrich_map.get(node['id']) or {}
+        tags = node.get('tags', {})
+        region_name = tags.get('addr:province') or tags.get('is_in:region') or enr.get('region', '')
+        s, p = build_station_record(node, prices, now_iso, fallback, regional_offsets, region_name)
         # Doplň chybějící město/region z cenapaliw (OSM má ~57 % stanic bez města)
-        enr = enrich_map.get(node['id'])
         if enr:
             if not s['city'] and enr.get('city'):
                 s['city'] = enr['city']
@@ -932,7 +985,7 @@ def main():
     #     S reálnou cenou ji zobrazíme, bez ceny dostane odhad (jako OSM stanice).
     real_sa = 0
     for sc in standalone_cp:
-        s, p = build_standalone_record(sc, now_iso, fallback)
+        s, p = build_standalone_record(sc, now_iso, fallback, regional_offsets)
         if p['source'] == 'cenapaliw.pl':
             real_sa += 1
         stations_list.append(s)
