@@ -1,4 +1,4 @@
-import { StationWithPrice } from '@/types';
+import { StationWithPrice, isRealSource } from '@/types';
 import { formatPrice } from '@/lib/data';
 import Link from 'next/link';
 import { TrendingDown, MapPin } from 'lucide-react';
@@ -17,7 +17,7 @@ const MEDAL_COLORS = [
 
 function StationRow({ s, i, fuel }: { s: StationWithPrice; i: number; fuel: 'on' | 'pb95' }) {
   const price = s.price?.[fuel];
-  const isReal = s.price?.source === 'cenapaliw.pl';
+  const isReal = isRealSource(s.price?.source);
   return (
     <Link
       href={`/stacja/${s.id}/`}

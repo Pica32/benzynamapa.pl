@@ -1,4 +1,4 @@
-import { StationWithPrice, FuelType, FUEL_LABELS } from '@/types';
+import { StationWithPrice, FuelType, FUEL_LABELS, isRealSource } from '@/types';
 import { formatPrice, slugify } from '@/lib/data';
 import Link from 'next/link';
 import { TrendingDown, MapPin } from 'lucide-react';
@@ -17,7 +17,7 @@ export default function CheapestTable({ stations, fuelType, city }: Props) {
   // Reálné ceny první, pak odhady
   const real = stations.filter(s =>
     s.price?.[fuelType] != null &&
-    s.price.source === 'cenapaliw.pl' &&
+    isRealSource(s.price.source) &&
     new Date(s.price.reported_at).getTime() > cutoff
   ).sort((a, b) => (a.price![fuelType] ?? 999) - (b.price![fuelType] ?? 999));
 
@@ -78,7 +78,9 @@ export default function CheapestTable({ stations, fuelType, city }: Props) {
                   {i === 0 && (
                     <span className="ml-1 text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">najtańsza</span>
                   )}
-                  {s.price?.source === 'cenapaliw.pl'
+                  {s.price?.source === 'community'
+                    ? <div className="text-[9px] text-green-600">✓ od społeczności</div>
+                    : isRealSource(s.price?.source)
                     ? <div className="text-[9px] text-green-500">✓ zweryfikowane</div>
                     : <div className="text-[9px] text-gray-400">~ szacunek</div>
                   }

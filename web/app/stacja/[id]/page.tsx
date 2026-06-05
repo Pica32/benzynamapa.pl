@@ -1,5 +1,5 @@
 import { getStationById, getStations, getStationsWithPrices, getStationsByCity, formatPrice, slugify } from '@/lib/data';
-import { CITIES, FUEL_LABELS } from '@/types';
+import { CITIES, FUEL_LABELS, isRealSource } from '@/types';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { MapPin, Clock, ChevronLeft, Navigation, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -74,14 +74,14 @@ export default async function StationPage({ params }: Props) {
   const lng = station.lng.toFixed(6);
   const citySlug = slugify(station.city);
   const cityExists = CITIES.some(c => c.slug === citySlug);
-  const hasRealPrice = station.price?.source === 'cenapaliw.pl';
+  const hasRealPrice = isRealSource(station.price?.source);
 
   // Cross-link na top stacje s ověřenou cenou ze stejného města (vzor z benzinmapa.cz)
   // Zlepší interní prolinkování + SEO city/station authority + UX pro stránky bez real ceny
   const nearbyWithRealPrice = cityExists
     ? getStationsByCity(station.city)
         .filter(s => s.id !== station.id)
-        .filter(s => s.price?.source === 'cenapaliw.pl')
+        .filter(s => isRealSource(s.price?.source))
         .filter(s => s.price?.pb95 != null || s.price?.on != null)
         .sort((a, b) => {
           const pa = a.price?.pb95 ?? a.price?.on ?? Infinity;
@@ -229,7 +229,7 @@ export default async function StationPage({ params }: Props) {
               {fuels.map(fuel => {
                 const price = station.price![fuel];
                 if (!price) return null;
-                const isReal = station.price!.source === 'cenapaliw.pl';
+                const isReal = isRealSource(station.price!.source);
                 return (
                   <div key={fuel} className={`rounded-xl p-3 text-center border ${isReal ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600'}`}>
                     <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">{FUEL_LABELS[fuel]}</div>
@@ -257,9 +257,18 @@ export default async function StationPage({ params }: Props) {
           )}
         </div>
 
-        {/* Hlášení cen */}
+        {/* Hlášení cen — auto-otevřené u stanic bez ověřené ceny (víc hlášení) */}
         <div className="mb-5">
-          <PriceReport stationId={id} />
+          <PriceReport
+            stationId={id}
+            forceOpen={!hasRealPrice}
+            referencePrice={{
+              pb95: station.price?.pb95 ?? undefined,
+              pb98: station.price?.pb98 ?? undefined,
+              on: station.price?.on ?? undefined,
+              lpg: station.price?.lpg ?? undefined,
+            }}
+          />
         </div>
 
         {/* GPS + nawigacja */}
@@ -408,7 +417,7 @@ export default async function StationPage({ params }: Props) {
               : ' Godziny otwarcia zalecamy sprawdzić bezpośrednio na miejscu lub na stronie operatora.'}
           </p>
           <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-3">
-            {station.price?.source === 'cenapaliw.pl'
+            {station.price && isRealSource(station.price.source)
               ? <>
                   Aktualne ceny paliw na tej stacji:{station.price.pb95 ? ` Benzyna 95 – ${formatPrice(station.price.pb95)} zł/l` : ''}
                   {station.price.on ? `, diesel – ${formatPrice(station.price.on)} zł/l` : ''}

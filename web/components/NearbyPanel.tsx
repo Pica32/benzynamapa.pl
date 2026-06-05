@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Navigation } from 'lucide-react';
-import { StationWithPrice, FuelType, FUEL_LABELS } from '@/types';
+import { StationWithPrice, FuelType, FUEL_LABELS, isRealSource } from '@/types';
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
@@ -36,8 +36,8 @@ export default function NearbyPanel({ stations, userLat, userLng, fuelType, loca
     .filter(s => s.dist < 25)
     .sort((a, b) => {
       // Reálné ceny najpierw, potem według ceny
-      const aReal = a.price?.source === 'cenapaliw.pl' ? 0 : 1;
-      const bReal = b.price?.source === 'cenapaliw.pl' ? 0 : 1;
+      const aReal = isRealSource(a.price?.source) ? 0 : 1;
+      const bReal = isRealSource(b.price?.source) ? 0 : 1;
       if (aReal !== bReal) return aReal - bReal;
       return (a.price![fuelType] ?? 999) - (b.price![fuelType] ?? 999);
     })
@@ -73,7 +73,7 @@ export default function NearbyPanel({ stations, userLat, userLng, fuelType, loca
         <div className="flex gap-3 overflow-x-auto pb-1 snap-x">
           {nearby.map(s => {
             const price = s.price![fuelType]!;
-            const isReal = s.price?.source === 'cenapaliw.pl';
+            const isReal = isRealSource(s.price?.source);
             const gmaps = `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}`;
 
             return (

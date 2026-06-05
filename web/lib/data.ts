@@ -1,4 +1,4 @@
-import { Station, StationPrice, StationWithPrice, Stats, FuelType, BrandPage } from '@/types';
+import { Station, StationPrice, StationWithPrice, Stats, FuelType, BrandPage, isRealSource } from '@/types';
 import fs from 'fs';
 import path from 'path';
 
@@ -74,6 +74,8 @@ export function isPriceStale(reportedAt: string): boolean {
   return Date.now() - new Date(reportedAt).getTime() > TWO_DAYS_MS;
 }
 
+export { isRealSource };
+
 const PRICE_MIN: Record<FuelType, number> = {
   pb95: 5.0,
   pb98: 5.5,
@@ -93,10 +95,10 @@ export function getCheapestStations(fuelType: FuelType, limit = 10): StationWith
   const cutoff = Date.now() - TWO_DAYS_MS;
   const all = getStationsWithPrices().filter(s => s.price?.[fuelType] != null);
 
-  // Reálné ceny (cenapaliw.pl) — zobrazit prioritně
+  // Reálné ceny (cenapaliw.pl + komunita) — zobrazit prioritně
   const real = all.filter(s =>
-    s.price?.source === 'cenapaliw.pl' &&
-    new Date(s.price.reported_at).getTime() > cutoff
+    isRealSource(s.price?.source) &&
+    new Date(s.price!.reported_at).getTime() > cutoff
   );
 
   // Pokud máme dost reálných, vrátíme jen ty

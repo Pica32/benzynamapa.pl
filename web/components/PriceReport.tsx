@@ -1,7 +1,11 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { FUEL_LABELS, FuelType } from '@/types';
-import { Users, CheckCircle, Send, ChevronDown, ChevronUp } from 'lucide-react';
+import { Users, CheckCircle, Send, ChevronDown, ChevronUp, Flame, Trophy } from 'lucide-react';
+import {
+  loadGam, awardReport, awardConfirm, levelInfo, type GamState,
+} from '@/lib/gamification';
+import { VERIFY_THRESHOLD } from '@/lib/priceModeration';
 
 interface UserSub {
   id: string;
@@ -45,9 +49,15 @@ function saveLocalSub(stationId: string, entry: UserSub) {
 
 const FUEL_ORDER: FuelType[] = ['pb95', 'on', 'pb98', 'lpg'];
 
-interface Props { stationId: string; initialFuel?: FuelType; forceOpen?: boolean; }
+interface Props {
+  stationId: string;
+  initialFuel?: FuelType;
+  forceOpen?: boolean;
+  /** Aktuálně zobrazené ceny stanice — reference pro automatickou kontrolu + pre-fill. */
+  referencePrice?: Partial<Record<FuelType, number>>;
+}
 
-export default function PriceReport({ stationId, initialFuel, forceOpen }: Props) {
+export default function PriceReport({ stationId, initialFuel, forceOpen, referencePrice }: Props) {
   const [subs, setSubs] = useState<UserSub[]>([]);
   const [confirmed, setConfirmed] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState(false);
@@ -55,6 +65,8 @@ export default function PriceReport({ stationId, initialFuel, forceOpen }: Props
   const [formPrice, setFormPrice] = useState('');
   const [sending, setSending] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [gam, setGam] = useState<GamState | null>(null);
+  const [flash, setFlash] = useState<{ pts: number; level?: string } | null>(null);
 
   const load = useCallback(async () => {
     const local = getLocalSubs(stationId);
@@ -69,10 +81,25 @@ export default function PriceReport({ stationId, initialFuel, forceOpen }: Props
   }, [stationId]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { setGam(loadGam()); }, []);
   useEffect(() => { if (forceOpen) setOpen(true); }, [forceOpen]);
   useEffect(() => { if (initialFuel) setFormFuel(initialFuel); }, [initialFuel]);
 
-  const verified = subs.filter(s => s.confirmations >= 3);
+  // Pre-fill: nabídni aktuální cenu stanice → 1 tap na "Zgłoś" = potvrzení (auto-ověřeno).
+  useEffect(() => {
+    const ref = referencePrice?.[formFuel];
+    setFormPrice(ref != null ? ref.toFixed(2).replace('.', ',') : '');
+  }, [formFuel, referencePrice]);
+
+  // Transientní zhasnutí flash hlášky o bodech
+  useEffect(() => {
+    if (!flash) return;
+    const t = setTimeout(() => setFlash(null), 4500);
+    return () => clearTimeout(t);
+  }, [flash]);
+
+  const verified = subs.filter(s => s.confirmations >= VERIFY_THRESHOLD);
+  const lvl = gam ? levelInfo(gam.points) : null;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -87,14 +114,27 @@ export default function PriceReport({ stationId, initialFuel, forceOpen }: Props
     const res = await fetch('/api/report-price', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ station_id: stationId, fuel_type: formFuel, price: p, browser_id: getBrowserId() }),
+      body: JSON.stringify({
+        station_id: stationId, fuel_type: formFuel, price: p,
+        browser_id: getBrowserId(), reference: referencePrice?.[formFuel] ?? null,
+      }),
     });
     const data = await res.json();
-    setMsg({ text: res.ok ? 'Cena zgłoszona, dziękujemy!' : (data.error ?? 'Błąd'), ok: res.ok });
     if (res.ok) {
-      setFormPrice('');
       if (data.entry) saveLocalSub(stationId, data.entry);
+      const r = awardReport();
+      setGam(r.state);
+      setFlash({ pts: r.earned, level: r.leveledUp?.name });
+      setMsg({
+        text: data.autoVerified
+          ? 'Cena potwierdzona automatycznie ✓ Dzięki! 🎉'
+          : 'Cena zgłoszona — czeka na potwierdzenie. Dzięki! 🎉',
+        ok: true,
+      });
       load();
+    } else {
+      // 422 = automatyczna kontrola odrzuciła (np. nierealna cena)
+      setMsg({ text: data.error ?? 'Błąd', ok: false });
     }
     setSending(false);
   }
@@ -109,6 +149,9 @@ export default function PriceReport({ stationId, initialFuel, forceOpen }: Props
       const newSet = new Set(confirmed).add(subId);
       setConfirmed(newSet);
       saveConfirmed(newSet);
+      const r = awardConfirm();
+      setGam(r.state);
+      setFlash({ pts: r.earned, level: r.leveledUp?.name });
       load();
     } else {
       const d = await res.json();
@@ -117,11 +160,20 @@ export default function PriceReport({ stationId, initialFuel, forceOpen }: Props
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+    <div className="relative bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+      {/* Flash — získané body / nová ranga */}
+      {flash && (
+        <div className="absolute top-2 right-2 z-10 animate-bounce">
+          <div className="bg-green-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1">
+            +{flash.pts} pkt{flash.level ? ` · ${flash.level}!` : ''}
+          </div>
+        </div>
+      )}
+
       {verified.length > 0 && (
         <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-800">
           <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-            <Users size={13} /> Ceny użytkowników (potwierdzone)
+            <Users size={13} /> Ceny od kierowców (potwierdzone)
           </p>
           <div className="flex flex-wrap gap-3">
             {verified.map(s => (
@@ -136,21 +188,52 @@ export default function PriceReport({ stationId, initialFuel, forceOpen }: Props
           </div>
         </div>
       )}
+
       <button onClick={() => setOpen(v => !v)}
         className="w-full flex items-center justify-between px-5 py-3.5 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
         <span className="flex items-center gap-2">
-          <Users size={15} className="text-blue-500" />
-          Zgłoś / potwierdź cenę
+          <Users size={15} className="text-green-600" />
+          Zgłoś cenę i zdobądź punkty
           {subs.length > 0 && (
             <span className="bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs font-bold px-2 py-0.5 rounded-full">{subs.length}</span>
           )}
         </span>
         {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
       </button>
+
       {open && (
         <div className="px-5 pb-5 border-t border-gray-100 dark:border-gray-700 pt-4">
+          {/* Herní lišta — hodnost, body, postup, série */}
+          {lvl && (
+            <div className="mb-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-gray-700/60 dark:to-gray-700/30 rounded-xl border border-green-100 dark:border-gray-600 p-3">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="flex items-center gap-2 text-sm font-bold text-gray-800 dark:text-white">
+                  <span className="text-lg">{lvl.current.icon}</span> {lvl.current.name}
+                </span>
+                <span className="flex items-center gap-2">
+                  {gam!.streakDays >= 2 && (
+                    <span className="flex items-center gap-0.5 text-xs font-bold text-orange-500" title="Seria dni z rzędu">
+                      <Flame size={12} /> {gam!.streakDays}
+                    </span>
+                  )}
+                  <span className="text-sm font-black text-green-700 dark:text-green-400">{gam!.points} pkt</span>
+                </span>
+              </div>
+              <div className="h-1.5 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+                <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${Math.round(lvl.progress * 100)}%` }} />
+              </div>
+              <div className="flex justify-between mt-1 text-[10px] text-gray-500 dark:text-gray-400">
+                <span>{gam!.reports} zgłoszeń · {gam!.confirms} potwierdzeń</span>
+                {lvl.next ? <span className="flex items-center gap-1"><Trophy size={10} /> {lvl.toNext} pkt do: {lvl.next.name}</span> : <span>Maks. ranga! 🏆</span>}
+              </div>
+            </div>
+          )}
+
           <form onSubmit={submit} className="mb-5">
-            <p className="text-xs text-gray-500 mb-3">Znasz aktualną cenę? Zgłoś ją w kilka sekund.</p>
+            <p className="text-xs text-gray-500 mb-3">
+              Znasz aktualną cenę? Zgłoś ją w kilka sekund —{' '}
+              <strong className="text-green-700 dark:text-green-400">+10 pkt</strong> i pomagasz innym kierowcom.
+            </p>
             <div className="flex gap-2 flex-wrap mb-3">
               {FUEL_ORDER.map(f => (
                 <button key={f} type="button" onClick={() => setFormFuel(f)}
@@ -169,7 +252,7 @@ export default function PriceReport({ stationId, initialFuel, forceOpen }: Props
               <button type="submit" disabled={sending}
                 className="flex items-center gap-2 px-5 py-3 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-bold rounded-xl transition-colors text-sm">
                 <Send size={15} />
-                {sending ? 'Wysyłam…' : 'Zgłoś'}
+                {sending ? 'Wysyłam…' : 'Zgłoś +10'}
               </button>
             </div>
           </form>
@@ -178,26 +261,26 @@ export default function PriceReport({ stationId, initialFuel, forceOpen }: Props
           )}
           {subs.length > 0 && (
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Zgłoszone ceny (ostatnie 24h)</p>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Zgłoszone ceny (ostatnie 24h) — potwierdź za +5 pkt</p>
               {subs.sort((a, b) => b.confirmations - a.confirmations).map(s => {
                 const isConfirmed = confirmed.has(s.id);
-                const v3 = s.confirmations >= 3;
+                const isVerified = s.confirmations >= VERIFY_THRESHOLD;
                 return (
-                  <div key={s.id} className={`flex items-center justify-between rounded-xl p-3 border ${v3 ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700' : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600'}`}>
+                  <div key={s.id} className={`flex items-center justify-between rounded-xl p-3 border ${isVerified ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700' : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600'}`}>
                     <div>
                       <span className="text-xs text-gray-400 mr-2">{FUEL_LABELS[s.fuel_type]}</span>
-                      <span className={`text-xl font-black ${v3 ? 'text-blue-700 dark:text-blue-300' : 'text-gray-800 dark:text-gray-100'}`}>
+                      <span className={`text-xl font-black ${isVerified ? 'text-blue-700 dark:text-blue-300' : 'text-gray-800 dark:text-gray-100'}`}>
                         {s.price.toFixed(2).replace('.', ',')}
                       </span>
                       <span className="text-xs text-gray-400 ml-1">zł/l</span>
-                      {v3 && <span className="ml-2 text-xs bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full font-semibold">✓ Potwierdzone</span>}
+                      {isVerified && <span className="ml-2 text-xs bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full font-semibold">✓ Potwierdzone</span>}
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-400">{s.confirmations}/3</span>
+                      <span className="text-xs text-gray-400">{s.confirmations}/{VERIFY_THRESHOLD}</span>
                       {!isConfirmed ? (
                         <button onClick={() => confirm(s.id)}
                           className="text-xs bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 hover:border-green-400 hover:text-green-700 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg font-semibold transition-colors">
-                          Potwierdź
+                          Potwierdź +5
                         </button>
                       ) : (
                         <span className="flex items-center gap-1 text-xs text-green-600 font-semibold"><CheckCircle size={13} /> Potwierdzono</span>
@@ -208,7 +291,11 @@ export default function PriceReport({ stationId, initialFuel, forceOpen }: Props
               })}
             </div>
           )}
-          {subs.length === 0 && <p className="text-sm text-gray-400 text-center py-3">Brak zgłoszeń. Bądź pierwszy!</p>}
+          {subs.length === 0 && (
+            <p className="text-sm text-gray-400 text-center py-3">
+              Brak zgłoszeń. <strong className="text-green-600">Bądź pierwszy i zgarnij +10 pkt!</strong>
+            </p>
+          )}
         </div>
       )}
     </div>

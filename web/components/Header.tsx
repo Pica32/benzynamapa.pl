@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Fuel, Map, TrendingDown, BarChart2, Calculator, BookOpen, MapPin } from 'lucide-react';
+import DriverRankBadge from '@/components/DriverRankBadge';
 
 export default function Header() {
   return (
@@ -37,9 +38,11 @@ export default function Header() {
                 {label}
               </Link>
             ))}
+            <DriverRankBadge />
           </nav>
 
           <div className="lg:hidden flex items-center gap-2">
+            <DriverRankBadge />
             <Link href="/najtansze-diesel/" className="text-xs text-green-700 font-semibold bg-green-50 dark:bg-gray-800 dark:text-green-400 px-2 py-1 rounded-lg">
               Diesel
             </Link>

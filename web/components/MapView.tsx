@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useCallback } from 'react';
-import { StationWithPrice, FuelType, FUEL_LABELS } from '@/types';
+import { StationWithPrice, FuelType, FUEL_LABELS, isRealSource } from '@/types';
 
 function getPriceColor(price: number, allPrices: number[]): string {
   if (!allPrices.length) return '#6b7280';
@@ -35,7 +35,7 @@ function buildGeoJSON(stations: StationWithPrice[], fuelType: FuelType) {
       .filter(s => s.price?.[fuelType] != null)
       .map(s => {
         const price = s.price![fuelType]!;
-        const isReal = s.price?.source === 'cenapaliw.pl';
+        const isReal = isRealSource(s.price?.source);
         const stale = isReal && s.price?.reported_at ? isPriceStale(s.price.reported_at) : false;
         return {
           type: 'Feature' as const,

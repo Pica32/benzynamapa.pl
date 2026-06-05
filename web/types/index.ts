@@ -25,6 +25,13 @@ export interface StationWithPrice extends Station {
   price: StationPrice | null;
 }
 
+/** Zdroje s reálnou (nikoli odhadovanou) cenou: agregátor cenapaliw.pl
+ *  a komunitní hlášení uživatelů ('community'). Pure helper bez server-deps,
+ *  aby ho mohly importovat i client komponenty (mapa, tabulky). */
+export function isRealSource(source?: string | null): boolean {
+  return source === 'cenapaliw.pl' || source === 'community';
+}
+
 export interface Stats {
   last_updated: string;
   averages: {

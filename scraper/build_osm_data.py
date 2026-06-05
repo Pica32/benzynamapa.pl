@@ -12,7 +12,8 @@ Strategie:
 """
 import sys, requests, json, os, math, re, time, unicodedata
 sys.stdout.reconfigure(encoding='utf-8')
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+import statistics
 from bs4 import BeautifulSoup
 
 OVERPASS_ENDPOINTS = [
@@ -81,6 +82,10 @@ LPG_BRANDS = {'orlen', 'lotos', 'bp', 'moya', 'huzar', 'amic', 'circle k'}
 PREMIUM_BRANDS = {'shell', 'bp', 'circle k', 'orlen', 'neste'}
 
 FALLBACK_AVG = {'pb95': 6.25, 'on': 7.10, 'pb98': 7.10, 'lpg': 3.30}  # aktualizováno 2026-05-21
+
+# Zdroje považované za "reálné" (ne odhad) — pro statistiky, mapu, řazení.
+# 'community' = ceny nahlášené uživateli benzynamapa.pl (nejaktuálnější, ověřené potvrzením).
+REAL_SOURCES = ('cenapaliw.pl', 'community')
 
 
 # ── helpers ────────────────────────────────────────────────────────────────────
@@ -231,180 +236,190 @@ def fetch_epetrol_averages() -> dict:
         return {'national': {}, 'regional': {}}
 
 
-# ── cenapaliw.pl scraper ───────────────────────────────────────────────────────
+# ── komunitní ceny (Supabase) — hlášení od uživatelů benzynamapa.pl ─────────────
 
-def scrape_voivodeship_page(voiv: str, fuel_code: str, page: int, session: requests.Session) -> list:
-    """Stáhne ceny z jedné stránky vojvodství + paliva.
+def fetch_community_prices() -> dict:
+    """Načte komunitní hlášení cen ze Supabase (posledních 24h) a agreguje
+    MEDIÁN per station_id + palivo (medián odolá jednomu chybnému hlášení).
 
-    URL struktura cenapaliw.pl (od 2026-05):
-    - /stationer/{fuel_code}/{voiv}/wszystko/{page}  → konkrétní vojvodství, paginace
-    - /stationer/{fuel_code}/wszystko/wszystko/{page} → celá PL
-    Bez `/wszystko/{page}` na konci server vrací 301 redirect na homepage (top14).
+    Vrací {station_id: {pb95?, pb98?, on?, lpg?}} — klíč je NAŠE station_id
+    (pl_* / cp_*), takže merge je přímý, bez GPS párování.
+    Vyžaduje env SUPABASE_URL + SUPABASE_SERVICE_KEY; jinak {} (graceful skip).
     """
-    url = f'{CENAPALIW}/stationer/{fuel_code}/{voiv}/wszystko/{page}'
-    # Retry s exponential backoff (max 3 pokusy) — robust vs network glitches
-    last_err = None
+    url = os.environ.get('SUPABASE_URL')
+    key = os.environ.get('SUPABASE_SERVICE_KEY')
+    if not url or not key:
+        print("  → komunitní ceny: SUPABASE env nenastaveno (přeskočeno)")
+        return {}
+
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    try:
+        r = requests.get(
+            f"{url.rstrip('/')}/rest/v1/price_submissions",
+            params={
+                'select': 'station_id,fuel_type,price,confirmations',
+                'submitted_at': f'gt.{cutoff}',
+            },
+            headers={'apikey': key, 'Authorization': f'Bearer {key}'},
+            timeout=20,
+        )
+        if r.status_code != 200:
+            print(f"  ✗ komunitní ceny HTTP {r.status_code}")
+            return {}
+        rows = r.json()
+    except (requests.RequestException, ValueError) as e:
+        print(f"  ✗ komunitní ceny: {e}")
+        return {}
+
+    valid_fuels = ('pb95', 'pb98', 'on', 'lpg')
+    groups: dict = {}
+    for row in rows:
+        sid = row.get('station_id')
+        ft = row.get('fuel_type')
+        pr = row.get('price')
+        if not sid or ft not in valid_fuels or pr is None:
+            continue
+        try:
+            pr = float(pr)
+        except (TypeError, ValueError):
+            continue
+        pmin, pmax = PRICE_RANGE.get(ft, (1.0, 15.0))
+        if not (pmin <= pr <= pmax):
+            continue
+        groups.setdefault((sid, ft), []).append(pr)
+
+    out: dict = {}
+    for (sid, ft), vals in groups.items():
+        out.setdefault(sid, {})[ft] = round(statistics.median(vals), 2)
+    print(f"  → komunitní ceny: {len(out)} stanic z {len(rows)} hlášení (24h)")
+    return out
+
+
+# ── cenapaliw.pl scraper — /mapa/data (kompletní databáze, 1 request) ───────────
+
+def fetch_mapa_data(session: requests.Session) -> list:
+    """Stáhne KOMPLETNÍ databázi stanic cenapaliw.pl přes /mapa/data (1 POST).
+
+    Od redesignu 2026-05-29 je cenapaliw JS mapa, která načítá všechna data
+    z /mapa/data (POST, vyžaduje CSRF token + cookie ze stránky /mapa).
+    Vrací ~5980 stanic; každá: {id, lat, lng, company, address, commune, county,
+    link, price95, price98, priceDiesel, priceLpg, ...}. Cena = null, pokud
+    stanice nemá aktuální hlášení (jen ~140 stanic má cenu).
+
+    Mnohem robustnější než stará paginace: 1 request místo ~700 + GPS inline
+    (žádné per-stanice detail fetche). Diagnostika při rozbití:
+      curl -s URL/mapa | grep csrf-token   →  POST URL/mapa/data s tím tokenem.
+    """
+    # 1) GET /mapa — získej CSRF token + session cookie (PHPSESSID drží jar)
+    try:
+        rm = session.get(f'{CENAPALIW}/mapa', headers=H, timeout=25)
+        m = re.search(r'name="csrf-token"\s+content="([^"]+)"', rm.text)
+        csrf = m.group(1) if m else ''
+    except (requests.Timeout, requests.ConnectionError) as e:
+        print(f"  ✗ /mapa GET selhal: {e}")
+        return []
+    if not csrf:
+        print("  ✗ /mapa: CSRF token nenalezen (změna struktury?)")
+        return []
+
+    # 2) POST /mapa/data — kompletní JSON pole stanic
+    headers = dict(H)
+    headers.update({
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRF-Token': csrf,
+        'Referer': f'{CENAPALIW}/mapa',
+    })
     for attempt in range(3):
         try:
-            r = session.get(url, headers=H, timeout=25)
+            r = session.post(f'{CENAPALIW}/mapa/data', headers=headers, timeout=40)
             if r.status_code == 200:
-                break
-            if r.status_code in (429, 503):  # rate limit / overload
-                time.sleep(2 ** attempt)  # 1s, 2s, 4s
+                data = r.json()
+                return data if isinstance(data, list) else []
+            if r.status_code in (429, 503):
+                time.sleep(2 ** attempt)
                 continue
-            return []  # 404, 5xx — neopakovat
-        except (requests.Timeout, requests.ConnectionError) as e:
-            last_err = e
+            print(f"  ✗ /mapa/data HTTP {r.status_code}")
+            return []
+        except (requests.Timeout, requests.ConnectionError, ValueError) as e:
+            print(f"  ✗ /mapa/data pokus {attempt+1}: {e}")
             time.sleep(2 ** attempt)
-    else:
-        print(f"  ✗ {voiv}/{fuel_code} page {page} 3× failed: {last_err}")
-        return []
-    try:
-        soup = BeautifulSoup(r.text, 'html.parser')
-        results = []
+    return []
 
-        for row in soup.select('#price_table tr.table-row'):
-            tds = row.select('td')
-            if len(tds) < 2:
+
+def fetch_cenapaliw_directory() -> list:
+    """Normalizovaný seznam VŠECH stanic z /mapa/data (s validní GPS v PL).
+    Každá: {cp_id, name, city, address, county, lat, lng, pb95, pb98, on, lpg}
+    (ceny = None, pokud cenapaliw nehlásí). Použito pro dvě věci:
+      1. reálné ceny → prices_from_directory()  (stanice s ≥1 cenou)
+      2. doplnění metadat OSM → enrich_osm_metadata()  (OSM má ~57 % stanic bez města)
+
+    Zdroj: 1 POST request. Historie: do 2026-05 paginovaný HTML scrape
+    /stationer/... (rozbil se redesignem), od 2026-06-04 /mapa/data.
+    """
+    print("Scrapuji cenapaliw.pl /mapa/data…")
+    session = requests.Session()
+    raw = fetch_mapa_data(session)
+    print(f"  → /mapa/data: {len(raw)} stanic v databázi cenapaliw")
+
+    fuel_fields = [('pb95', 'price95'), ('pb98', 'price98'),
+                   ('on', 'priceDiesel'), ('lpg', 'priceLpg')]
+    out: list = []
+    for st in raw:
+        cp_id = st.get('id')
+        lat, lng = st.get('lat'), st.get('lng')
+        if cp_id is None or lat is None or lng is None:
+            continue
+        try:
+            latf, lngf = float(lat), float(lng)
+        except (TypeError, ValueError):
+            continue
+        if not (48.5 <= latf <= 55.5 and 13.5 <= lngf <= 24.5):  # PL bbox sanity
+            continue
+
+        rec = {
+            'cp_id': str(cp_id),
+            'name': (st.get('company') or '').strip(),
+            'city': (st.get('commune') or '').strip(),
+            'address': (st.get('address') or '').strip(),
+            'county': (st.get('county') or '').strip(),
+            'lat': latf, 'lng': lngf,
+            'pb95': None, 'pb98': None, 'on': None, 'lpg': None,
+        }
+        for our_key, cp_key in fuel_fields:
+            v = st.get(cp_key)
+            if v is None:
                 continue
-            td_name = tds[0]
-
-            # Extrahuj jméno bez textu ze small tagu
-            small = td_name.select_one('small')
-            city = small.get_text(strip=True) if small else ''
-            if small:
-                small.decompose()
-            b_tag = td_name.select_one('b')
-            name = b_tag.get_text(strip=True) if b_tag else ''
-
-            # Adresa z textu v td po name
-            addr_lines = [t.strip() for t in td_name.strings if t.strip() and t.strip() != name]
-            address = addr_lines[0] if addr_lines else ''
-
-            # Cena
-            b_price = tds[1].select_one('b')
-            price = parse_price_pln(b_price.get_text() if b_price else '')
-
-            # data-href pro identifikaci (cenapaliw URL slug stanice)
-            href = row.get('data-href', '')
-
-            if name and price:
-                results.append({
-                    'name': name, 'city': city, 'address': address,
-                    'fuel': fuel_code, 'price': price,
-                    'href': href, 'voiv': voiv,
-                })
-        return results
-    except Exception as e:
-        print(f"  ✗ {voiv}/{fuel_code} page {page}: {e}")
-        return []
+            try:
+                v = round(float(v), 2)
+            except (TypeError, ValueError):
+                continue
+            pmin, pmax = PRICE_RANGE[our_key]
+            if pmin <= v <= pmax:
+                rec[our_key] = v
+        out.append(rec)
+    return out
 
 
-# Backward compat alias (pokud někde voláno bez page)
-def scrape_voivodeship(voiv: str, fuel_code: str, session: requests.Session) -> list:
-    return scrape_voivodeship_page(voiv, fuel_code, 0, session)
-
-
-# Maximum stránek per vojvodství × fuel (cenapaliw.pl má max ~15 stránek per vojvodství)
-MAX_PAGES_PER_VOIV = 20
-
-# Maximum stránek celostátně (cenapaliw.pl má max ~16 stránek pro `wszystko/wszystko`)
-MAX_PAGES_NATIONAL = 25
+def prices_from_directory(directory: list) -> dict:
+    """Z directory vybere stanice s ALESPOŇ JEDNOU cenou → {cp_id: rec}."""
+    by_id: dict = {}
+    counts = {'pb95': 0, 'pb98': 0, 'on': 0, 'lpg': 0}
+    for rec in directory:
+        has = False
+        for f in ('pb95', 'pb98', 'on', 'lpg'):
+            if rec.get(f) is not None:
+                counts[f] += 1
+                has = True
+        if has:
+            by_id[rec['cp_id']] = rec
+    print(f"  → {len(by_id)} stanic s reálnou cenou "
+          f"(pb95={counts['pb95']}, pb98={counts['pb98']}, on={counts['on']}, lpg={counts['lpg']})")
+    return by_id
 
 
 def scrape_all_prices() -> dict:
-    """
-    Vrací slovník: href → {name, city, address, pb95, pb98, on, lpg}.
-
-    Strategie 2026-05-22+:
-    1. PRIMARY: celostátní endpoint /stationer/{fuel}/wszystko/wszystko/{page}
-       → ~210 unikátních stanic per palivo × 4 paliva = ~800 stanic celkem
-       → 4 paliva × ~20 stránek = ~80 requestů (rychlé)
-    2. SECONDARY: per-vojvodství pro dodatečné regionální stanice
-       → 4 × 16 × ~10 stránek = ~640 requestů
-       → typicky přidá dalších 100-200 stanic
-
-    Celkem: ~1000+ unikátních stanic s reálnou cenou.
-    Doba běhu: ~5-7 minut s 0.3s pauzou mezi requesty.
-
-    Historie bugů (opraveno):
-    - 2026-05: Stará verze scrape_voivodeship('pb95', 'e95', ...) — bug,
-      arg prohozeny, jen 3 stanice
-    - 2026-05-20: www.cenapaliw.pl redirektoval na homepage, opraveno
-    - 2026-05-22: Přidán celostátní endpoint (7× víc stanic)
-    """
-    print("Scrapuji ceny z cenapaliw.pl…")
-    session = requests.Session()
-    by_href: dict[str, dict] = {}
-    counts = {'pb95': 0, 'pb98': 0, 'on': 0, 'lpg': 0}
-
-    # cenapaliw fuel codes
-    fuel_map = [
-        ('pb95', 'e95'),  # 95 (E10)
-        ('pb98', 'e98'),  # 98 (E5)
-        ('on',   'on'),   # Diesel
-        ('lpg',  'lpg'),  # LPG
-    ]
-
-    def absorb(rows: list, fuel_key: str, pmin: float, pmax: float) -> int:
-        """Přidá řádky do by_href, vrátí počet nových cen."""
-        new = 0
-        for row_data in rows:
-            href = row_data['href'] or f"{row_data['name']}|{row_data['city']}"
-            if not (pmin <= row_data['price'] <= pmax):
-                continue
-            if href not in by_href:
-                by_href[href] = {
-                    'name': row_data['name'], 'city': row_data['city'],
-                    'address': row_data['address'],
-                    'pb95': None, 'pb98': None, 'on': None, 'lpg': None,
-                }
-            if by_href[href][fuel_key] is None:
-                by_href[href][fuel_key] = row_data['price']
-                counts[fuel_key] += 1
-                new += 1
-        return new
-
-    # PHASE 1: Celostátní endpoint (víc unikátních stanic)
-    print("  Phase 1: celostátní endpoint /wszystko/wszystko/...")
-    for fuel_key, fuel_code in fuel_map:
-        pmin, pmax = PRICE_RANGE[fuel_key]
-        seen_in_fuel: set[str] = set()
-        national_new = 0
-        for page in range(MAX_PAGES_NATIONAL):
-            rows = scrape_voivodeship_page('wszystko', fuel_code, page, session)
-            if not rows:
-                break
-            new_hrefs = {(r['href'] or f"{r['name']}|{r['city']}") for r in rows} - seen_in_fuel
-            if not new_hrefs and page > 1:
-                break  # paginace vyčerpaná
-            seen_in_fuel |= {(r['href'] or f"{r['name']}|{r['city']}") for r in rows}
-            national_new += absorb(rows, fuel_key, pmin, pmax)
-            time.sleep(0.3)
-        print(f"    {fuel_key}: {national_new} cen z celostátního endpointu")
-
-    # PHASE 2: Per-vojvodství (pro dodatečné regionální pokrytí)
-    print("  Phase 2: per-vojvodství pro doplnění...")
-    for fuel_key, fuel_code in fuel_map:
-        pmin, pmax = PRICE_RANGE[fuel_key]
-        voiv_total = 0
-        for voiv in VOIVODESHIPS:
-            seen_in_voiv: set[str] = set()
-            for page in range(MAX_PAGES_PER_VOIV):
-                rows = scrape_voivodeship_page(voiv, fuel_code, page, session)
-                if not rows:
-                    break
-                new_hrefs = {(r['href'] or f"{r['name']}|{r['city']}") for r in rows} - seen_in_voiv
-                if not new_hrefs and page > 0:
-                    break
-                seen_in_voiv |= {(r['href'] or f"{r['name']}|{r['city']}") for r in rows}
-                voiv_total += absorb(rows, fuel_key, pmin, pmax)
-                time.sleep(0.3)
-        print(f"    {fuel_key}: +{voiv_total} cen z per-vojvodství")
-
-    print(f"  → CELKEM {len(by_href)} unikátních stanic")
-    print(f"    Pb95: {counts['pb95']}, Pb98: {counts['pb98']}, ON: {counts['on']}, LPG: {counts['lpg']}")
-    return by_href
+    """Zpětně kompatibilní obal: fetch + filtr na stanice s cenou."""
+    return prices_from_directory(fetch_cenapaliw_directory())
 
 
 # ── matching ───────────────────────────────────────────────────────────────────
@@ -452,74 +467,110 @@ def build_osm_indexes(osm_nodes: list):
     return by_name_city, by_brand_city
 
 
-def match_prices_to_osm(scraped: dict, osm_nodes: list) -> dict:
-    """
-    Vrací price_map: osm_id → {pb95, pb98, on, lpg}.
-    Matchuje přes:
-      1. name+city (přesný)
-      2. brand+city
-      3. fuzzy name obsahuje / je obsažen v OSM name, stejné město
-    """
-    name_city_idx, brand_city_idx = build_osm_indexes(osm_nodes)
-    price_map = {}
-    matched = 0
+GPS_MATCH_RADIUS_M = 200  # max vzdálenost cenapaliw GPS ↔ OSM uzel (shoda / dedup)
 
-    for href, sc in scraped.items():
-        raw_name = sc['name']
-        sc_city_norm = normalize(sc['city'])
 
-        # Přeskaküj nesmyslné řádky
-        if normalize(raw_name) in JUNK_NAMES or not sc_city_norm:
+def _build_gps_grid(osm_nodes: list, cell: float = 0.02):
+    """Prostorová mřížka OSM uzlů (buňka ~2 km) pro rychlý nearest-neighbor."""
+    grid: dict = {}
+    for n in osm_nodes:
+        la, lo = n.get('lat'), n.get('lon')
+        if la is None or lo is None:
             continue
-        if len(normalize(raw_name)) < 2:
+        grid.setdefault((round(la / cell), round(lo / cell)), []).append(n)
+    return grid, cell
+
+
+def _nearest_osm(lat: float, lng: float, grid: dict, cell: float, radius_m: float):
+    """Najde nejbližší OSM uzel do radius_m (prohledá 3×3 buňky kolem bodu)."""
+    kla, klo = round(lat / cell), round(lng / cell)
+    best, best_d = None, float(radius_m)
+    for dla in (-1, 0, 1):
+        for dlo in (-1, 0, 1):
+            for n in grid.get((kla + dla, klo + dlo), ()):
+                d = haversine_m(lat, lng, n['lat'], n['lon'])
+                if d < best_d:
+                    best_d, best = d, n
+    return best
+
+
+def match_prices_to_osm(directory: list, osm_nodes: list):
+    """Sloučí CELOU cenapaliw /mapa/data databázi s OSM přes GPS (≤ GPS_MATCH_RADIUS_M).
+
+    Pro každou cenapaliw stanici:
+      - má OSM partnera (volného) + reálnou cenu → cena se přiřadí OSM (price_map)
+      - má OSM partnera, bez ceny → metadata řeší enrich_osm_metadata(), nepřidává se
+      - NEMÁ OSM partnera (díra v OSM) → standalone (přidá se jako NOVÁ stanice):
+          * s reálnou cenou → zobrazí reálnou cenu
+          * bez ceny → dostane odhad (jako OSM stanice bez reálné ceny)
+    Standalone se deduplikují i mezi sebou (žádné dvojí markery).
+
+    Vrací (price_map, standalone).
+    """
+    FUELS = ('pb95', 'pb98', 'on', 'lpg')
+    grid, cell = _build_gps_grid(osm_nodes)
+    price_map: dict = {}
+    used_osm: set = set()
+    standalone: list = []
+    added_grid: dict = {}  # GPS index už přidaných standalone (dedup mezi sebou)
+
+    def near_added(lat: float, lng: float) -> bool:
+        kla, klo = round(lat / cell), round(lng / cell)
+        for dla in (-1, 0, 1):
+            for dlo in (-1, 0, 1):
+                for (la, lo) in added_grid.get((kla + dla, klo + dlo), ()):
+                    if haversine_m(lat, lng, la, lo) < GPS_MATCH_RADIUS_M:
+                        return True
+        return False
+
+    # Stanice s cenou zpracuj PRVNÍ — aby reálná cena nikdy nepadla na dedup s odhadovou
+    ordered = sorted(directory, key=lambda r: not any(r.get(f) is not None for f in FUELS))
+    for rec in ordered:
+        has_price = any(rec.get(f) is not None for f in FUELS)
+        node = _nearest_osm(rec['lat'], rec['lng'], grid, cell, GPS_MATCH_RADIUS_M)
+
+        if node is not None:
+            # OSM stanice je blízko
+            if has_price and node['id'] not in used_osm:
+                used_osm.add(node['id'])
+                price_map[node['id']] = {f: rec.get(f) for f in FUELS}
+                continue
+            if not has_price:
+                continue  # bez ceny → jen enrichment metadat, nepřidávat (dup s OSM)
+            # má cenu, ale OSM partner už obsazený jinou stanicí → spadne do standalone
+        # node is None (díra v OSM) NEBO obsazený OSM + reálná cena → standalone
+        if near_added(rec['lat'], rec['lng']):
             continue
+        standalone.append(dict(rec))
+        added_grid.setdefault((round(rec['lat'] / cell), round(rec['lng'] / cell)), []).append(
+            (rec['lat'], rec['lng']))
 
-        sc_name_norm = normalize(raw_name)
-        sc_brand_norm = clean_brand_name(raw_name)  # e.g. 'circle k'
-        key_name  = sc_name_norm  + '|' + sc_city_norm
-        key_brand = sc_brand_norm + '|' + sc_city_norm
+    priced_sa = sum(1 for s in standalone if any(s.get(f) is not None for f in FUELS))
+    print(f"  → GPS match: {len(price_map)} cen → OSM; "
+          f"standalone {len(standalone)} ({priced_sa} s cenou + {len(standalone) - priced_sa} odhad)")
+    return price_map, standalone
 
-        # 1. Přesný match přes name
-        candidates = name_city_idx.get(key_name, [])
 
-        # 2. Match přes brand tag
-        if not candidates:
-            candidates = brand_city_idx.get(key_brand, [])
+ENRICH_RADIUS_M = 200  # doplnění města/regionu z cenapaliw na OSM uzel do 200 m
 
-        # 3. Fuzzy — token overlap
-        if not candidates:
-            sc_tokens = set(sc_name_norm.split()) | set(sc_brand_norm.split())
-            for nk, nodes in name_city_idx.items():
-                nk_name, nk_city = nk.split('|', 1)
-                if nk_city != sc_city_norm:
-                    continue
-                nk_tokens = set(nk_name.split())
-                # alespoň 1 shodný token a minimální délka
-                if sc_tokens & nk_tokens and len(sc_tokens & nk_tokens) >= 1:
-                    if not any(t in {'stacja', 'paliw', 'benzyna', 'punkt'} for t in (sc_tokens & nk_tokens)):
-                        candidates = nodes
-                        break
-            # Brand vs name
-            if not candidates:
-                for bk, nodes in brand_city_idx.items():
-                    bk_name, bk_city = bk.split('|', 1)
-                    if bk_city != sc_city_norm:
-                        continue
-                    if sc_brand_norm in bk_name or bk_name in sc_brand_norm:
-                        candidates = nodes
-                        break
+def enrich_osm_metadata(osm_nodes: list, directory: list) -> dict:
+    """GPS-matchuje VŠECHNY cenapaliw stanice (i bez ceny) → OSM a vrací doplňky
+    metadat (city, region) pro OSM uzly. Cíl: doplnit chybějící město — OSM má
+    ~57 % stanic bez addr:city, což láme stránky měst i lokální vyhledávání.
 
-        if candidates:
-            osm_id = candidates[0]['id']
-            if osm_id not in price_map:
-                price_map[osm_id] = {'pb95': None, 'pb98': None, 'on': None, 'lpg': None}
-            for fuel in ('pb95', 'pb98', 'on', 'lpg'):
-                if sc.get(fuel) is not None:
-                    price_map[osm_id][fuel] = sc[fuel]
-            matched += 1
-
-    print(f"  → Namatchováno {matched} cenapaliw záznamů → OSM")
-    return price_map
+    Doplňuje JEN geografická pole (město/region), která sdílí každá stanice
+    v okolí do 200 m. Brand/adresu záměrně NE (riziko špatného přiřazení)."""
+    grid, cell = _build_gps_grid(osm_nodes)
+    enrich: dict = {}
+    for rec in directory:
+        if not rec.get('city'):
+            continue
+        node = _nearest_osm(rec['lat'], rec['lng'], grid, cell, ENRICH_RADIUS_M)
+        if node is None:
+            continue
+        enrich.setdefault(node['id'], {'city': rec['city'], 'region': rec.get('county', '')})
+    print(f"  → Doplněno metadat (město/region) pro {len(enrich)} OSM stanic")
+    return enrich
 
 
 # ── build records ──────────────────────────────────────────────────────────────
@@ -610,11 +661,77 @@ def build_station_record(node: dict, prices: dict | None, now_iso: str, fallback
     return station, price_rec
 
 
+def build_standalone_record(sc: dict, now_iso: str, fallback_avgs: dict):
+    """Stanice z cenapaliw, která nemá partnera v OSM → přidá se jako samostatná.
+    id má prefix 'cp_' (vs 'pl_' u OSM).
+      - má reálnou cenu → source='cenapaliw.pl', zobrazí reálné ceny
+      - bez ceny → source='estimate', dopočítá odhad (značka + národní průměr) —
+        STEJNOU metodikou jako OSM stanice (build_station_record), aby odhady
+        ve stejném městě nebyly nekonzistentní."""
+    brand = sc.get('name') or 'Stacja paliw'
+    brand_key = brand.lower()
+    sid = f"cp_{sc['cp_id']}"
+    has_real = any(sc.get(f) is not None for f in ('pb95', 'pb98', 'on', 'lpg'))
+
+    avgs = dict(fallback_avgs)  # národní průměry (jako OSM odhady)
+
+    offset = 0.0
+    for k, v in BRAND_OFFSET.items():
+        if k in brand_key:
+            offset = v
+            break
+
+    def est(fuel: str, use_offset: bool = True) -> float:
+        pmin, pmax = PRICE_RANGE[fuel]
+        base = avgs.get(fuel, FALLBACK_AVG[fuel])
+        if not (pmin <= base <= pmax):
+            base = FALLBACK_AVG[fuel]
+        v = round_price(base + (offset if use_offset else 0.0))
+        return v if pmin <= v <= pmax else FALLBACK_AVG[fuel]
+
+    if has_real:
+        source = 'cenapaliw.pl'
+        pb95, pb98, on, lpg = sc.get('pb95'), sc.get('pb98'), sc.get('on'), sc.get('lpg')
+    else:
+        source = 'estimate'
+        pb95 = est('pb95')
+        on   = est('on')
+        pb98 = est('pb98') if any(b in brand_key for b in PREMIUM_BRANDS) else None
+        lpg  = est('lpg', use_offset=False) if any(b in brand_key for b in LPG_BRANDS) else None
+
+    services = []
+    if lpg is not None:
+        services.append('lpg')
+
+    station = {
+        'id': sid,
+        'name': brand,
+        'brand': brand,
+        'lat': sc['lat'],
+        'lng': sc['lng'],
+        'address': sc.get('address') or sc.get('city', ''),
+        'city': sc.get('city', ''),
+        'region': sc.get('county', ''),
+        'services': services,
+        'opening_hours': '',
+    }
+    price_rec = {
+        'station_id': sid,
+        'pb95': pb95,
+        'pb98': pb98,
+        'on':   on,
+        'lpg':  lpg,
+        'source': source,
+        'reported_at': now_iso,
+    }
+    return station, price_rec
+
+
 # ── stats & history ────────────────────────────────────────────────────────────
 
 def compute_stats(prices_list: list, stations_list: list, now_iso: str) -> dict:
     def real_vals(fuel):
-        return [p[fuel] for p in prices_list if p.get(fuel) and p.get('source') == 'cenapaliw.pl']
+        return [p[fuel] for p in prices_list if p.get(fuel) and p.get('source') in REAL_SOURCES]
 
     def avg(lst):
         return round(sum(lst) / len(lst), 2) if lst else FALLBACK_AVG.get('pb95', 6.38)
@@ -650,7 +767,7 @@ def compute_stats(prices_list: list, stations_list: list, now_iso: str) -> dict:
         avg_val = avgs.get(fuel) or FALLBACK_AVG.get(fuel, 0)
         min_ok = avg_val * 0.85 if avg_val else 0
         vals = [(p[fuel], p['station_id']) for p in prices_list
-                if p.get(fuel) and p.get('source') == 'cenapaliw.pl' and p[fuel] >= min_ok]
+                if p.get(fuel) and p.get('source') in REAL_SOURCES and p[fuel] >= min_ok]
         if not vals:
             return {'price': FALLBACK_AVG.get(fuel, 0), 'station_id': '', 'city': ''}
         best = min(vals, key=lambda x: x[0])
@@ -671,7 +788,7 @@ def compute_stats(prices_list: list, stations_list: list, now_iso: str) -> dict:
     history = history[-95:]
     save_json(HISTORY_FILE, {'history': history})
 
-    updated = sum(1 for p in prices_list if p.get('source') == 'cenapaliw.pl')
+    updated = sum(1 for p in prices_list if p.get('source') in REAL_SOURCES)
 
     return {
         'last_updated': now_iso,
@@ -720,7 +837,7 @@ def build_map_data(stations: list, prices_list: list) -> dict:
         if s.get('opening_hours'): entry['opening_hours'] = s['opening_hours']
 
         if p:
-            src_short = 'r' if p['source'] == 'cenapaliw.pl' else 'e'
+            src_short = 'r' if p['source'] in REAL_SOURCES else 'e'
             price_entry: dict = {'src': src_short}
 
             # Vynech null hodnoty
@@ -753,14 +870,28 @@ def main():
     if not osm_nodes:
         print("VAROVÁNÍ: Žádné OSM stanice. Používám data z cache pokud existují.")
 
-    # 2. Scrape cenapaliw.pl (reálné PB95 ceny)
-    scraped = scrape_all_prices()
+    # 2. cenapaliw.pl /mapa/data — kompletní databáze (ceny + metadata) 1 requestem
+    directory = fetch_cenapaliw_directory()
+    scraped = prices_from_directory(directory)
+
+    # 2b. ROBUSTNOST: když klíčový zdroj úplně selže (OSM down NEBO cenapaliw
+    # /mapa/data prázdné) a už existují vygenerovaná data, NEPŘEPISUJ je
+    # all-estimaty / torzem — zachovej poslední dobrá data a skonči.
+    have_prev = os.path.exists(os.path.join(OUT_DIR, 'prices_latest.json'))
+    if have_prev and (not osm_nodes or not directory):
+        why = 'OSM nedostupné' if not osm_nodes else 'cenapaliw /mapa/data prázdné'
+        print(f"VAROVÁNÍ: {why} — zachovávám předchozí data (nepřepisuji). Konec.")
+        return
 
     # 3. e-petrol.pl průměry (lepší než historické fallbacky)
     epetrol_avgs = fetch_epetrol_averages()
 
-    # 4. Match cenapaliw → OSM
-    price_map = match_prices_to_osm(scraped, osm_nodes) if osm_nodes and scraped else {}
+    # 4. Sloučení celé cenapaliw databáze → OSM (GPS): ceny na OSM + standalone
+    #    (cenapaliw stanice, které v OSM chybí — přidáme je jako nové stanice)
+    price_map, standalone_cp = match_prices_to_osm(directory, osm_nodes) if osm_nodes and directory else ({}, [])
+
+    # 4b. Doplnění metadat (město/region) na OSM stanice z celé cenapaliw databáze
+    enrich_map = enrich_osm_metadata(osm_nodes, directory) if osm_nodes and directory else {}
 
     # 5. Fallback průměry: e-petrol > historie > FALLBACK_AVG
     hist = load_json(HISTORY_FILE).get('history', [])
@@ -780,11 +911,52 @@ def main():
 
     # 5. Sestavení výsledků
     stations_list, prices_list = [], []
+    enriched_count = 0
     for node in osm_nodes:
         prices = price_map.get(node['id'])
         s, p = build_station_record(node, prices, now_iso, fallback)
+        # Doplň chybějící město/region z cenapaliw (OSM má ~57 % stanic bez města)
+        enr = enrich_map.get(node['id'])
+        if enr:
+            if not s['city'] and enr.get('city'):
+                s['city'] = enr['city']
+                enriched_count += 1
+            if not s.get('region') and enr.get('region'):
+                s['region'] = enr['region']
         stations_list.append(s)
         prices_list.append(p)
+    if enriched_count:
+        print(f"  → Doplněno město u {enriched_count} OSM stanic (dříve prázdné)")
+
+    # 5b. Standalone cenapaliw stanice (chybí v OSM) → přidáme jako nové stanice.
+    #     S reálnou cenou ji zobrazíme, bez ceny dostane odhad (jako OSM stanice).
+    real_sa = 0
+    for sc in standalone_cp:
+        s, p = build_standalone_record(sc, now_iso, fallback)
+        if p['source'] == 'cenapaliw.pl':
+            real_sa += 1
+        stations_list.append(s)
+        prices_list.append(p)
+    if standalone_cp:
+        print(f"  → +{len(standalone_cp)} standalone cenapaliw stanic mimo OSM "
+              f"({real_sa} s reálnou cenou, {len(standalone_cp) - real_sa} s odhadem)")
+
+    # 5c. Komunitní ceny (hlášení uživatelů) — NEJVYŠŠÍ priorita (nejaktuálnější,
+    #     ověřené). Klíč = naše station_id → přímý merge, přebije odhad i cenapaliw.
+    community = fetch_community_prices()
+    if community:
+        pr_index = {p['station_id']: p for p in prices_list}
+        applied = 0
+        for sid, fuels in community.items():
+            p = pr_index.get(sid)
+            if not p:
+                continue
+            for f, val in fuels.items():
+                p[f] = val
+            p['source'] = 'community'
+            p['reported_at'] = now_iso
+            applied += 1
+        print(f"  → Komunitní ceny aplikovány na {applied} stanic (přebily odhad/cenapaliw)")
 
     print(f"  → Celkem {len(stations_list)} stanic")
 

@@ -45,7 +45,7 @@ Typy viz `web/types/index.ts`:
 - Server Components jsou výchozí — `"use client"` jen kde nutné
 - Metadata: `generateMetadata()` async funkce
 - Images: `next/image` vždy
-- `output: 'export'` v next.config.ts — statický export
+- **Server app na Vercelu** (NE statický export) — next.config.ts používá rewrites/redirects/headers a běží API routes (`/api/*`). Stránky jsou SSG (prerender přes `generateStaticParams`), ale servíruje je Node runtime, ne čistý statický host.
 
 ## Tailwind CSS v4 — klíčová pravidla
 

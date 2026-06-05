@@ -26,6 +26,12 @@ jobs:
 
       - name: Run scraper
         run: python scraper/build_osm_data.py
+        env:
+          # Komunitní ceny (hlášení uživatelů) — viz SUPABASE_SETUP.md.
+          # Nastav v repo: Settings → Secrets and variables → Actions.
+          # Bez nich scraper běží normálně, jen vynechá komunitní vrstvu.
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
 
       - name: Commit updated data
         id: commit
