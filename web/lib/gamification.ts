@@ -14,15 +14,18 @@ export interface GamState {
   lastDay: string;        // YYYY-MM-DD posledního příspěvku
   cities: string[];       // odlišná města, kde uživatel hlásil (pro odznak)
   badges: string[];       // odemčené odznaky (id)
+  discoveries: number;    // počet stanic BEZ reálné ceny, které uživatel "objevil" (bounty)
 }
 
 const KEY = 'benzynamapa_gam';
 
 export const POINTS_REPORT = 10;
 export const POINTS_CONFIRM = 5;
-export const POINTS_STREAK_BONUS = 5;   // bonus za udržení denní série
-export const POINTS_DAILY_BONUS = 10;   // bonus za první příspěvek dne (vrací lidi zpět)
-export const POINTS_BADGE = 25;         // bonus za odemčení odznaku
+export const POINTS_STREAK_BONUS = 5;    // bonus za udržení denní série
+export const POINTS_DAILY_BONUS = 10;    // bonus za první příspěvek dne (vrací lidi zpět)
+export const POINTS_BADGE = 25;          // bonus za odemčení odznaku
+export const POINTS_GAP_BOUNTY = 20;     // BONUS za hlášení na stanici BEZ reálné ceny
+                                         // → cíleně sbírá NOVÁ data tam, kde chybí
 
 export interface Level {
   min: number;
@@ -58,11 +61,12 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'streak_7', name: 'Tydzień z rzędu', desc: 'Seria 7 dni z rzędu', icon: '🔥', check: s => s.streakDays >= 7 },
   { id: 'cities_3', name: 'Lokalny ekspert', desc: 'Ceny w 3 miastach', icon: '📍', check: s => s.cities.length >= 3 },
   { id: 'cities_10', name: 'Podróżnik', desc: 'Ceny w 10 miastach', icon: '🗺️', check: s => s.cities.length >= 10 },
+  { id: 'discover_5', name: 'Odkrywca cen', desc: 'Dodaj cenę na 5 stacjach bez danych', icon: '🔍', check: s => s.discoveries >= 5 },
   { id: 'points_500', name: 'Ekspert paliwowy', desc: 'Zdobądź 500 punktów', icon: '⭐', check: s => s.points >= 500 },
   { id: 'points_1500', name: 'Legenda', desc: 'Zdobądź 1500 punktów', icon: '👑', check: s => s.points >= 1500 },
 ];
 
-const EMPTY: GamState = { points: 0, reports: 0, confirms: 0, streakDays: 0, lastDay: '', cities: [], badges: [] };
+const EMPTY: GamState = { points: 0, reports: 0, confirms: 0, streakDays: 0, lastDay: '', cities: [], badges: [], discoveries: 0 };
 
 function todayStr(): string {
   return new Date().toISOString().slice(0, 10);
@@ -120,19 +124,22 @@ export interface GamResult {
   base: number;
   dailyBonus: number;
   streakBonus: number;
+  gapBonus: number;              // bonus za hlášení na stanici bez reálné ceny
   leveledUp: Level | null;       // pokud akce posunula na novou hodnost
   newBadges: Achievement[];      // nově odemčené odznaky
 }
 
-function applyAction(base: number, kind: 'report' | 'confirm', city?: string): GamResult {
+function applyAction(base: number, kind: 'report' | 'confirm', city?: string, gapBounty = false): GamResult {
   const s = loadGam();
   const beforeLevel = levelInfo(s.points).current;
 
   const { streakBonus, dailyBonus } = bumpStreak(s);
-  let earned = base + streakBonus + dailyBonus;
+  const gapBonus = (kind === 'report' && gapBounty) ? POINTS_GAP_BOUNTY : 0;
+  let earned = base + streakBonus + dailyBonus + gapBonus;
   s.points += earned;
   if (kind === 'report') s.reports += 1;
   else s.confirms += 1;
+  if (gapBonus) s.discoveries += 1;
 
   if (city) {
     const c = city.trim();
@@ -153,11 +160,12 @@ function applyAction(base: number, kind: 'report' | 'confirm', city?: string): G
   save(s);
   const afterLevel = levelInfo(s.points).current;
   const leveledUp = afterLevel.min > beforeLevel.min ? afterLevel : null;
-  return { state: s, earned, base, dailyBonus, streakBonus, leveledUp, newBadges };
+  return { state: s, earned, base, dailyBonus, streakBonus, gapBonus, leveledUp, newBadges };
 }
 
-export function awardReport(city?: string): GamResult {
-  return applyAction(POINTS_REPORT, 'report', city);
+/** @param gapBounty true = stanice nemá reálnou cenu → bonus (cíleně sbírá nová data). */
+export function awardReport(city?: string, gapBounty = false): GamResult {
+  return applyAction(POINTS_REPORT, 'report', city, gapBounty);
 }
 
 export function awardConfirm(): GamResult {

@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Flame, Trophy, MapPin, CheckCircle, Send, TrendingUp } from 'lucide-react';
+import { Flame, Trophy, MapPin, CheckCircle, Send, TrendingUp, Search } from 'lucide-react';
 import {
   loadGam, levelInfo, badgeStatus, LEVELS, dailyBonusAvailable, type GamState,
 } from '@/lib/gamification';
@@ -69,11 +69,12 @@ export default function ProfilClient() {
       </div>
 
       {/* Statistiky */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {[
           { icon: Send, label: 'Zgłoszeń', val: gam.reports, color: 'text-green-600' },
           { icon: CheckCircle, label: 'Potwierdzeń', val: gam.confirms, color: 'text-blue-600' },
           { icon: MapPin, label: 'Miast', val: gam.cities.length, color: 'text-purple-600' },
+          { icon: Search, label: 'Nowych stacji', val: gam.discoveries, color: 'text-amber-600' },
         ].map(({ icon: Icon, label, val, color }) => (
           <div key={label} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 text-center">
             <Icon className={`mx-auto mb-1 ${color}`} size={20} />

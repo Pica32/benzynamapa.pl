@@ -58,9 +58,11 @@ interface Props {
   referencePrice?: Partial<Record<FuelType, number>>;
   /** Město stanice — pro odznak „ceny v N městech". */
   city?: string;
+  /** Stanice NEMÁ reálnou cenu → bounty +20 pkt (cíleně sbírá nová data). */
+  bounty?: boolean;
 }
 
-export default function PriceReport({ stationId, initialFuel, forceOpen, referencePrice, city }: Props) {
+export default function PriceReport({ stationId, initialFuel, forceOpen, referencePrice, city, bounty }: Props) {
   const [subs, setSubs] = useState<UserSub[]>([]);
   const [confirmed, setConfirmed] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState(false);
@@ -133,16 +135,19 @@ export default function PriceReport({ stationId, initialFuel, forceOpen, referen
     const data = await res.json();
     if (res.ok) {
       if (data.entry) saveLocalSub(stationId, data.entry);
-      const r = awardReport(city);
+      const r = awardReport(city, bounty);
       setGam(r.state);
       setFlash({ pts: r.earned, level: r.leveledUp?.name });
       if (r.newBadges.length) setBadgePopup(r.newBadges[0]);
-      const bonusNote = r.dailyBonus ? ` (+${r.dailyBonus} bonus dzienny!)` : '';
+      const extras = [
+        r.gapBonus ? `+${r.gapBonus} za nową stację!` : '',
+        r.dailyBonus ? `+${r.dailyBonus} bonus dzienny` : '',
+      ].filter(Boolean).join(', ');
       setMsg({
         text: (data.autoVerified
           ? 'Cena potwierdzona automatycznie ✓ '
           : 'Cena zgłoszona — czeka na potwierdzenie. ')
-          + `+${r.earned} pkt${bonusNote} 🎉`,
+          + `+${r.earned} pkt${extras ? ` (${extras})` : ''} 🎉`,
         ok: true,
       });
       load();
@@ -268,6 +273,11 @@ export default function PriceReport({ stationId, initialFuel, forceOpen, referen
               Znasz aktualną cenę? Zgłoś ją w kilka sekund —{' '}
               <strong className="text-green-700 dark:text-green-400">+10 pkt</strong> i pomagasz innym kierowcom.
             </p>
+            {bounty && (
+              <p className="text-xs mb-3 px-3 py-2 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 font-bold flex items-center gap-1.5 border border-green-300 dark:border-green-700">
+                🎯 Ta stacja nie ma jeszcze potwierdzonej ceny — bądź pierwszy i zgarnij <strong>+20 pkt ekstra!</strong>
+              </p>
+            )}
             {gam && dailyBonusAvailable(gam) && (
               <p className="text-xs mb-3 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 font-semibold flex items-center gap-1.5">
                 🎁 Bonus dzienny: pierwsze zgłoszenie dziś = <strong>+{10} pkt ekstra!</strong>

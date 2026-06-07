@@ -262,6 +262,7 @@ export default async function StationPage({ params }: Props) {
           <PriceReport
             stationId={id}
             city={station.city}
+            bounty={!hasRealPrice}
             forceOpen={!hasRealPrice}
             referencePrice={{
               pb95: station.price?.pb95 ?? undefined,
