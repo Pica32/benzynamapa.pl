@@ -187,6 +187,7 @@ def fetch_epetrol_averages() -> dict:
 
         tables = soup.find_all('table')
         if not tables:
+            print(f"  ✗ e-petrol.pl: žádná tabulka (HTTP {r.status_code}, {len(r.text)} B)")
             return result
 
         # PRIMARY (table 0): Pb98 Pb95 ON LPG headers, latest row je aktuální

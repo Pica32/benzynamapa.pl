@@ -29,7 +29,15 @@
 5. `/historia-cen/` graf zvládá krátkou řadu (popisky osy, body u < 20 záznamů).
 6. Supabase: kód čte i `SUPABASE_SERVICE_ROLE_KEY` (název z Vercel Marketplace integrace).
 
+### ⚠ KRITICKÉ — web je offline (zjištěno 2026-10-22)
+- `benzynamapa.pl` vrací **HTTP 402 Payment required / DEPLOYMENT_DISABLED** (Vercel).
+- Vercel u commitů hlásí „Account is blocked." od ~2026-07-14; poslední úspěšný deploy ~2026-07-04.
+- Oprava výše je zmergovaná do `master` (42a5939) a pushnutá, ale nasadí se až po odblokování účtu.
+- Řešení: Vercel dashboard účtu, kde projekt běží → Usage / Billing (Hobby limity, příp. Pro),
+  nebo přesun hostingu (benzinmapa.cz běží na Cloudflare).
+
 ### Zbývá (musí udělat uživatel)
+- Odblokovat Vercel účet (viz výše) — bez toho je vše ostatní neviditelné.
 - Supabase projekt + SQL tabulka + env (Vercel) + secrets (GitHub) dle `SUPABASE_SETUP.md`.
   Bez toho komunitní hlášení nepřežijí cold start na Vercelu.
 - GSC / Bing Webmaster dle `NEXT_STEPS_GSC.md` (pokud ještě není hotové).
