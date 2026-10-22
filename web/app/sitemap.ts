@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { getStationsWithPrices } from '@/lib/data';
+import { getStationsWithPrices, isRealSource } from '@/lib/data';
 import { CITIES, BRAND_PAGES, REGIONS, HIGHWAYS, BORDERS } from '@/types';
 
 export const dynamic = 'force-static';
@@ -160,7 +160,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .map(s => ({
         url: `${BASE}/stacja/${s.id}/`,
         changeFrequency: 'hourly' as const,
-        priority: s.price?.source === 'cenapaliw.pl' ? 0.7 : 0.5,
+        priority: isRealSource(s.price?.source) ? 0.7 : 0.5,
         lastModified: now,
       }));
   } catch {

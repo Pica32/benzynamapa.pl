@@ -1,4 +1,4 @@
-import { getStats, getStationsWithPrices, formatPrice } from '@/lib/data';
+import { getStats, getStationsWithPrices, formatPrice, getSaneRealStations, isRealSource } from '@/lib/data';
 import { CITIES, REGIONS, BRAND_PAGES, HIGHWAYS, BORDERS } from '@/types';
 
 export const dynamic = 'force-static';
@@ -26,9 +26,8 @@ export function GET() {
   const isoNow = now.toISOString();
 
   // Top 30 najtańszych stacji s real cenou (per paliwo)
-  const realStations = allStations.filter(s => s.price?.source === 'cenapaliw.pl');
-  const cheapest = (fuel: 'pb95' | 'on' | 'lpg') => realStations
-    .filter(s => s.price?.[fuel] != null)
+  const realStations = allStations.filter(s => isRealSource(s.price?.source));
+  const cheapest = (fuel: 'pb95' | 'on' | 'lpg') => getSaneRealStations(allStations, fuel)
     .sort((a, b) => (a.price![fuel] ?? 999) - (b.price![fuel] ?? 999))
     .slice(0, 30);
 

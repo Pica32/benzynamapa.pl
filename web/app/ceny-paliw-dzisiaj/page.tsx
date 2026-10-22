@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { getStats, getStationsWithPrices, formatPrice } from '@/lib/data';
+import { getStats, getStationsWithPrices, formatPrice, getSaneRealStations } from '@/lib/data';
 import { TrendingDown, TrendingUp, Info, MapPin } from 'lucide-react';
 
 export const revalidate = 3600; // 1h — chytá scraper aktualizace
@@ -46,20 +46,16 @@ export default function CenyDzisiajPage() {
   }
 
   const allStations = getStationsWithPrices();
-  const realStations = allStations.filter(s => s.price?.source === 'cenapaliw.pl');
 
-  const top5Pb95 = [...realStations]
-    .filter(s => s.price?.pb95 != null)
+  const top5Pb95 = getSaneRealStations(allStations, 'pb95')
     .sort((a, b) => (a.price!.pb95 ?? 999) - (b.price!.pb95 ?? 999))
     .slice(0, 5);
 
-  const top5ON = [...realStations]
-    .filter(s => s.price?.on != null)
+  const top5ON = getSaneRealStations(allStations, 'on')
     .sort((a, b) => (a.price!.on ?? 999) - (b.price!.on ?? 999))
     .slice(0, 5);
 
-  const top5LPG = [...realStations]
-    .filter(s => s.price?.lpg != null)
+  const top5LPG = getSaneRealStations(allStations, 'lpg')
     .sort((a, b) => (a.price!.lpg ?? 999) - (b.price!.lpg ?? 999))
     .slice(0, 5);
 

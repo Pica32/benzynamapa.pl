@@ -51,6 +51,10 @@ alter table price_submissions enable row level security;
 
 → pak **Redeploy**.
 
+*Alternativa:* Supabase přes **Vercel Marketplace** (Project → Storage → Supabase) nastaví env
+sám — kód čte i jeho název `SUPABASE_SERVICE_ROLE_KEY`, nic nepřejmenovávej. Tabulku z kroku 2
+je stejně potřeba vytvořit v SQL Editoru.
+
 **GitHub** (scraper): repo → Settings → Secrets and variables → **Actions** → New repository secret:
 | Name | Value |
 |---|---|

@@ -47,11 +47,11 @@ export default function PriceCharts() {
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={formatted} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="label" tick={{ fontSize: 11 }} interval={13} />
+              <XAxis dataKey="label" tick={{ fontSize: 11 }} interval="preserveStartEnd" minTickGap={24} />
               <YAxis tick={{ fontSize: 11 }} domain={['auto', 'auto']} tickFormatter={v => v.toFixed(2).replace('.', ',')} />
               <Tooltip formatter={(v) => [typeof v === 'number' ? v.toFixed(2).replace('.', ',') + ' zł' : v, label]} />
               <Legend />
-              <Line type="monotone" dataKey={key} stroke={color} strokeWidth={2} dot={false} name={label} connectNulls />
+              <Line type="monotone" dataKey={key} stroke={color} strokeWidth={2} dot={formatted.length < 20} name={label} connectNulls />
             </LineChart>
           </ResponsiveContainer>
         </div>

@@ -1,4 +1,4 @@
-import { getStationsByCity, getStats, formatPrice, slugify } from '@/lib/data';
+import { getStationsByCity, getStats, formatPrice, slugify, getSaneRealStations, getSaneRealPrices } from '@/lib/data';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { CITIES } from '@/types';
@@ -23,9 +23,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const today = new Date().toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
   const stations = getStationsByCity(city.name);
-  const real = stations.filter(s => s.price?.source === 'cenapaliw.pl');
-  const cheapestPb95 = real.filter(s => s.price?.pb95).sort((a, b) => (a.price!.pb95 ?? 999) - (b.price!.pb95 ?? 999))[0];
-  const cheapestOn   = real.filter(s => s.price?.on).sort((a, b) => (a.price!.on ?? 999) - (b.price!.on ?? 999))[0];
+  const cheapestPb95 = getSaneRealStations(stations, 'pb95').sort((a, b) => (a.price!.pb95 ?? 999) - (b.price!.pb95 ?? 999))[0];
+  const cheapestOn   = getSaneRealStations(stations, 'on').sort((a, b) => (a.price!.on ?? 999) - (b.price!.on ?? 999))[0];
 
   const priceStr = [
     cheapestPb95 ? `Benzyna 95 od ${formatPrice(cheapestPb95.price!.pb95)}` : '',
@@ -66,11 +65,10 @@ export default async function MiastoPage({ params }: Props) {
   const stats = getStats();
   const today = new Date().toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
 
-  // Jen reálné ceny (cenapaliw.pl) — odhady ostatních stanic = FALLBACK_AVG ± BRAND_OFFSET,
-  // takže míchat real + estimate by zkreslilo "průměr" + "najtańsza" města k národní střední.
-  const realPrices = allStations.filter(s => s.price?.source === 'cenapaliw.pl');
-  const pricesPb95  = realPrices.map(s => s.price?.pb95).filter(Boolean) as number[];
-  const pricesOn    = realPrices.map(s => s.price?.on).filter(Boolean) as number[];
+  // Jen reálné ceny (cenapaliw.pl + komunita) bez outlierů — odhady ostatních stanic =
+  // FALLBACK_AVG ± BRAND_OFFSET, takže míchat real + estimate by zkreslilo "průměr" + "najtańsza".
+  const pricesPb95  = getSaneRealPrices(allStations, 'pb95');
+  const pricesOn    = getSaneRealPrices(allStations, 'on');
 
   const avgPb95  = pricesPb95.length ? pricesPb95.reduce((a, b) => a + b, 0) / pricesPb95.length : null;
   const avgOn    = pricesOn.length   ? pricesOn.reduce((a, b) => a + b, 0)   / pricesOn.length   : null;
@@ -97,8 +95,7 @@ export default async function MiastoPage({ params }: Props) {
   // ItemList nejlevnějších stanic (top 10 dle pb95) — pro Google rich results + AI.
   // Jen reálné ceny: Google odmítá Offer s odhadovanou cenou jako rich result a v ItemList by
   // se míchaly skutečné ceny s estimaty.
-  const top10ForList = [...realPrices]
-    .filter(s => s.price?.pb95 != null)
+  const top10ForList = getSaneRealStations(allStations, 'pb95')
     .sort((a, b) => (a.price!.pb95 ?? 999) - (b.price!.pb95 ?? 999))
     .slice(0, 10);
 

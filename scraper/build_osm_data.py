@@ -81,7 +81,8 @@ BRAND_OFFSET = {
 LPG_BRANDS = {'orlen', 'lotos', 'bp', 'moya', 'huzar', 'amic', 'circle k'}
 PREMIUM_BRANDS = {'shell', 'bp', 'circle k', 'orlen', 'neste'}
 
-FALLBACK_AVG = {'pb95': 6.25, 'on': 7.10, 'pb98': 7.10, 'lpg': 3.30}  # aktualizováno 2026-05-21
+# Poslední záchrana, když selže e-petrol i historie. e-petrol národní 2026-10-21.
+FALLBACK_AVG = {'pb95': 6.70, 'on': 7.94, 'pb98': 7.43, 'lpg': 3.55}
 
 # Zdroje považované za "reálné" (ne odhad) — pro statistiky, mapu, řazení.
 # 'community' = ceny nahlášené uživateli benzynamapa.pl (nejaktuálnější, ověřené potvrzením).
@@ -172,6 +173,7 @@ def fetch_epetrol_averages() -> dict:
 
     Vrací: {
       'national': {'pb95': 6.42, 'pb98': 6.97, 'on': 6.82, 'lpg': 3.68},
+      'weekly':   [{'date': '2026-10-21', 'pb95': 6.70, ...}, ...],  # ~3 poslední týdny
       'regional': {'mazowieckie': {'pb95': 6.45, 'on': 6.80, 'lpg': 3.70}, ...}
     }
 
@@ -181,7 +183,7 @@ def fetch_epetrol_averages() -> dict:
     try:
         r = requests.get(f'{EPETROL}/notowania/rynek-krajowy/ceny-stacje-paliw', headers=H, timeout=20)
         soup = BeautifulSoup(r.text, 'html.parser')
-        result: dict = {'national': {}, 'regional': {}}
+        result: dict = {'national': {}, 'weekly': [], 'regional': {}}
 
         tables = soup.find_all('table')
         if not tables:
@@ -203,6 +205,20 @@ def fetch_epetrol_averages() -> dict:
                         pmin, pmax = PRICE_RANGE.get(fuel, (1.0, 15.0))
                         if v and pmin <= v <= pmax:
                             result['national'][fuel] = v
+                # Všechny řádky = týdenní národní průměry → doplnění historie (viz compute_stats)
+                for row in rows[1:]:
+                    h2c = dict(zip(headers, [c.get_text(strip=True) for c in row.find_all(['th', 'td'])]))
+                    date = h2c.get('aktualizacja', '')
+                    if not re.fullmatch(r'\d{4}-\d{2}-\d{2}', date):
+                        continue
+                    entry = {'date': date}
+                    for fuel in ('pb95', 'pb98', 'on', 'lpg'):
+                        v = parse_price_pln(h2c.get(fuel, ''))
+                        pmin, pmax = PRICE_RANGE.get(fuel, (1.0, 15.0))
+                        if v and pmin <= v <= pmax:
+                            entry[fuel] = v
+                    if len(entry) == 5:
+                        result['weekly'].append(entry)
             # Regionální průměry: po sloupcích Aktualizacja|Województwo|Pb95|ON|LPG
             elif 'województwo' in headers:
                 fuel_cols = {}
@@ -233,7 +249,7 @@ def fetch_epetrol_averages() -> dict:
         return result
     except Exception as e:
         print(f"  ✗ e-petrol.pl: {e}")
-        return {'national': {}, 'regional': {}}
+        return {'national': {}, 'weekly': [], 'regional': {}}
 
 
 # ── komunitní ceny (Supabase) — hlášení od uživatelů benzynamapa.pl ─────────────
@@ -247,7 +263,7 @@ def fetch_community_prices() -> dict:
     Vyžaduje env SUPABASE_URL + SUPABASE_SERVICE_KEY; jinak {} (graceful skip).
     """
     url = os.environ.get('SUPABASE_URL')
-    key = os.environ.get('SUPABASE_SERVICE_KEY')
+    key = os.environ.get('SUPABASE_SERVICE_KEY') or os.environ.get('SUPABASE_SERVICE_ROLE_KEY')
     if not url or not key:
         print("  → komunitní ceny: SUPABASE env nenastaveno (přeskočeno)")
         return {}
@@ -776,7 +792,13 @@ def build_standalone_record(sc: dict, now_iso: str, fallback_avgs: dict,
 
 # ── stats & history ────────────────────────────────────────────────────────────
 
-def compute_stats(prices_list: list, stations_list: list, now_iso: str) -> dict:
+def compute_stats(prices_list: list, stations_list: list, now_iso: str,
+                  ref_avgs: dict | None = None, weekly: list | None = None) -> dict:
+    """ref_avgs = referenční národní úroveň (e-petrol > historie > FALLBACK_AVG) z main().
+    Bez ní by se sanity check i výchozí průměr opíraly o natvrdo zadané FALLBACK_AVG, které
+    zastarává — tak vznikla 95denní plochá historie 6,25 zł (červen–říjen 2026)."""
+    ref = {**FALLBACK_AVG, **(ref_avgs or {})}
+
     def real_vals(fuel):
         return [p[fuel] for p in prices_list if p.get(fuel) and p.get('source') in REAL_SOURCES]
 
@@ -794,12 +816,12 @@ def compute_stats(prices_list: list, stations_list: list, now_iso: str) -> dict:
         return round((s[n // 2] if n % 2 else (s[n // 2 - 1] + s[n // 2]) / 2), 2)
 
     def robust_avg(fuel):
-        """Median místo průměru + sanity check vs FALLBACK_AVG (max ±35% odchylka)."""
+        """Median místo průměru + sanity check vs referenční úroveň (max ±35% odchylka)."""
         vals = real_vals(fuel)
         if not vals:
-            return FALLBACK_AVG[fuel]
+            return ref[fuel]
         med = median(vals)
-        fb = FALLBACK_AVG[fuel]
+        fb = ref[fuel]
         # Sanity check — pokud median >35% odchylka od fallback, máme bug nebo crash trhu
         if abs(med - fb) / fb > 0.35:
             print(f"  ⚠ Anomaly: {fuel} median {med:.2f} zł je >35% od fallback {fb:.2f} — používám fallback")
@@ -811,29 +833,37 @@ def compute_stats(prices_list: list, stations_list: list, now_iso: str) -> dict:
     def cheapest(fuel):
         # Sanity: odmítni ceny <85 % průměru — extrémní outliery (např. cenapaliw chyba
         # s PB95==ON==5.19 zł). Reálné akce/slevy nikdy nejdou pod ~15 % národního průměru.
-        avg_val = avgs.get(fuel) or FALLBACK_AVG.get(fuel, 0)
+        avg_val = avgs.get(fuel) or ref.get(fuel, 0)
         min_ok = avg_val * 0.85 if avg_val else 0
         vals = [(p[fuel], p['station_id']) for p in prices_list
                 if p.get(fuel) and p.get('source') in REAL_SOURCES and p[fuel] >= min_ok]
         if not vals:
-            return {'price': FALLBACK_AVG.get(fuel, 0), 'station_id': '', 'city': ''}
+            return {'price': ref.get(fuel, 0), 'station_id': '', 'city': ''}
         best = min(vals, key=lambda x: x[0])
         city = next((s['city'] for s in stations_list if s['id'] == best[1]), '')
         return {'price': best[0], 'station_id': best[1], 'city': city}
 
     # Historie
-    history = load_json(HISTORY_FILE).get('history', [])
+    today = now_iso[:10]
+    by_date = {h['date']: h for h in load_json(HISTORY_FILE).get('history', []) if h.get('date')}
+    # Týdenní národní průměry e-petrol doplní dny, kdy nemáme vlastní záznam (výpadek scraperu)
+    for w in weekly or []:
+        by_date.setdefault(w['date'], w)
+    # Dnešní záznam přepisuje každý běh — poslední běh dne = nejčerstvější data.
+    # Bez reálné ceny i bez e-petrolu by šlo jen o kopii včerejška → nezapisujeme.
+    if any(real_vals(f) for f in avgs) or weekly:
+        by_date[today] = {'date': today, 'pb95': avgs['pb95'], 'on': avgs['on'], 'lpg': avgs['lpg'], 'pb98': avgs['pb98']}
+    history = [by_date[d] for d in sorted(by_date)][-95:]
+    save_json(HISTORY_FILE, {'history': history})
+
+    # Trend vs nejbližší záznam ≥7 dní starý (podle data — historie může mít mezery)
     trend = {'pb95': 0.0, 'on': 0.0, 'lpg': 0.0}
-    if len(history) >= 7:
-        old = history[-7]
+    week_ago = (datetime.fromisoformat(today) - timedelta(days=7)).date().isoformat()
+    older = [h for h in history if h['date'] <= week_ago]
+    if older:
+        old = older[-1]
         for f in trend:
             trend[f] = round(avgs[f] - old.get(f, avgs[f]), 2)
-
-    today = now_iso[:10]
-    if not history or history[-1].get('date') != today:
-        history.append({'date': today, 'pb95': avgs['pb95'], 'on': avgs['on'], 'lpg': avgs['lpg'], 'pb98': avgs['pb98']})
-    history = history[-95:]
-    save_json(HISTORY_FILE, {'history': history})
 
     updated = sum(1 for p in prices_list if p.get('source') in REAL_SOURCES)
 
@@ -1014,7 +1044,8 @@ def main():
     print(f"  → Celkem {len(stations_list)} stanic")
 
     # 6. Stats
-    stats = compute_stats(prices_list, stations_list, now_iso)
+    stats = compute_stats(prices_list, stations_list, now_iso, fallback,
+                          epetrol_avgs.get('weekly', []) if isinstance(epetrol_avgs, dict) else [])
     print(f"  → Průměr PB95: {stats['averages']['pb95']:.2f} zł, ON: {stats['averages']['on']:.2f} zł")
     print(f"  → Stanic s reálnou cenou: {stats['stations_updated_today']}")
 

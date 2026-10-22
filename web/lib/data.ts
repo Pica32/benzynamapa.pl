@@ -126,6 +126,23 @@ export function getCheapestStations(fuelType: FuelType, limit = 10): StationWith
   return combined.slice(0, limit);
 }
 
+// Reálné ceny (cenapaliw.pl + komunita) v pásmu 85–125 % národního průměru.
+// Lokální průměr/min stojí často na 1–3 reálných cenách → jedna chyba zdroje
+// (např. PB95 == ON == 9,15 zł ve Warszawě) by jinak převzala celé město.
+// Dolní mez 85 % = stejná jako compute_stats.cheapest() ve scraperu.
+export function getSaneRealStations(stations: StationWithPrice[], fuel: FuelType): StationWithPrice[] {
+  const nat = getStats()?.averages[fuel];
+  return stations.filter(s => {
+    const p = s.price?.[fuel];
+    if (p == null || !isRealSource(s.price?.source)) return false;
+    return nat ? p >= nat * 0.85 && p <= nat * 1.25 : true;
+  });
+}
+
+export function getSaneRealPrices(stations: StationWithPrice[], fuel: FuelType): number[] {
+  return getSaneRealStations(stations, fuel).map(s => s.price![fuel] as number);
+}
+
 export function slugify(text: string): string {
   return text
     .toLowerCase()

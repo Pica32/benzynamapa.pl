@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { CITIES, REGIONS, BRAND_PAGES } from '@/types';
-import { getStationsWithPrices, getStats, formatPrice } from '@/lib/data';
+import { getStationsWithPrices, getStats, formatPrice, getSaneRealPrices } from '@/lib/data';
 import CheapestTable from '@/components/CheapestTable';
 import { MapPin, TrendingDown, Fuel } from 'lucide-react';
 
@@ -58,12 +58,11 @@ export default async function RegionPage({ params }: Props) {
   );
 
   const stats = getStats();
-  // Průměr regionu z REÁLNÝCH cen — odhady (estimate) jsou FALLBACK_AVG ± BRAND_OFFSET,
+  // Průměr regionu z REÁLNÝCH cen bez outlierů — odhady (estimate) jsou FALLBACK_AVG ± BRAND_OFFSET,
   // tj. míchat by zkreslilo regionální průměr k národnímu.
-  const realInRegion = allStations.filter(s => s.price?.source === 'cenapaliw.pl');
-  const pricesPb95 = realInRegion.map(s => s.price?.pb95).filter(Boolean) as number[];
-  const pricesOn = realInRegion.map(s => s.price?.on).filter(Boolean) as number[];
-  const pricesLpg = realInRegion.map(s => s.price?.lpg).filter(Boolean) as number[];
+  const pricesPb95 = getSaneRealPrices(allStations, 'pb95');
+  const pricesOn = getSaneRealPrices(allStations, 'on');
+  const pricesLpg = getSaneRealPrices(allStations, 'lpg');
 
   const avgPb95 = pricesPb95.length ? pricesPb95.reduce((a, b) => a + b, 0) / pricesPb95.length : null;
   const avgOn = pricesOn.length ? pricesOn.reduce((a, b) => a + b, 0) / pricesOn.length : null;

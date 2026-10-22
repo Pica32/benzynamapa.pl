@@ -34,7 +34,7 @@ export interface Submission {
 }
 
 const SUPA_URL = process.env.SUPABASE_URL;
-const SUPA_KEY = process.env.SUPABASE_SERVICE_KEY;
+const SUPA_KEY = process.env.SUPABASE_SERVICE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY; // ROLE_KEY = název z Vercel Marketplace integrace
 export const usingSupabase = Boolean(SUPA_URL && SUPA_KEY);
 
 const TABLE = 'price_submissions';

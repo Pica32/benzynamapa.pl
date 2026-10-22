@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { HIGHWAYS, CITIES, type Highway } from '@/types';
-import { getStationsWithPrices, formatPrice, slugify } from '@/lib/data';
+import { getStationsWithPrices, formatPrice, slugify, getSaneRealStations } from '@/lib/data';
 import CheapestTable from '@/components/CheapestTable';
 import { Map, TrendingDown, Info } from 'lucide-react';
 
@@ -61,10 +61,9 @@ export default async function HighwayPage({ params }: Props) {
   // Stanice v BBox autostrady — heuristika, ne přesné, ale dostatečné pro long-tail SEO
   const stations = allStations.filter(s => inBbox(s.lat, s.lng, hwy.bbox));
   // Pro průměry a ranking používáme jen reálné ceny — estimates podél autostrad
-  // (BBox zachytí celý region) by zkreslily výsledek k FALLBACK_AVG.
-  const realInBbox = stations.filter(s => s.price?.source === 'cenapaliw.pl');
-  const withPb95 = realInBbox.filter(s => s.price?.pb95 != null);
-  const withOn   = realInBbox.filter(s => s.price?.on != null);
+  // (BBox zachytí celý region) by zkreslily výsledek k FALLBACK_AVG. Outliery zdroje pryč.
+  const withPb95 = getSaneRealStations(stations, 'pb95');
+  const withOn   = getSaneRealStations(stations, 'on');
 
   const avgPb95 = withPb95.length
     ? withPb95.reduce((a, s) => a + (s.price!.pb95 ?? 0), 0) / withPb95.length

@@ -1,6 +1,42 @@
 # BenzynaMAPA.pl — Status vývoje
 
-## Poslední aktualizace: 2026-05-06 — BUILD ✅ + SCRAPER ✅ + DATA ✅
+## Aktuální stav: 2026-10-22 — dokončení větve `feat/community-gamification`
+
+### Výsledky analýzy
+- **Produkce (master) jela od června se starým, rozbitým scraperem.** cenapaliw.pl změnil web
+  (~2026-05-29), opravený scraper ležel jen ve větvi. Na webu: `stations_updated_today: 0`,
+  všech ~8 700 cen byly odhady, průměry = natvrdo zadané `FALLBACK_AVG` (PB95 6,25 / ON 7,10).
+- **Historie 95 dní byla falešná** — každý den stejné konstanty → plochý graf v `/historia-cen/`
+  a nesmyslný „trend 7d".
+- Trh mezitím šel nahoru: e-petrol 2026-10-21 PB95 6,70 / ON 7,94 / LPG 3,55 zł.
+
+### Co bylo uděláno
+1. Merge `origin/master` (446 datových commitů) do větve — konflikty jen v datových JSON.
+2. Nový scraper ověřen živě: **101 reálných cen** (z 6 101 stanic cenapaliw), 9 676 stanic,
+   PB95 medián 6,59 zł (e-petrol 6,70 ✓).
+3. Scraper — historie a průměry:
+   - `compute_stats` bere referenční úroveň z e-petrolu (ne zastaralou konstantu) pro sanity
+     check i pro den bez reálných cen. `FALLBACK_AVG` aktualizován na 2026-10-21.
+   - e-petrol týdenní národní průměry (3 týdny) se automaticky doplňují do dnů bez vlastního záznamu.
+   - Dnešní záznam se přepisuje každým během (dřív platil jen první běh dne).
+   - Den bez reálných cen i bez e-petrolu se do historie nezapíše (žádné další ploché kopie).
+   - Trend 7d se počítá podle data, ne podle indexu (historie může mít mezery).
+   - Falešných 95 záznamů smazáno → historie: 7./14./21. 10. (e-petrol) + 22. 10. (vlastní).
+4. Web — sanity check lokálních průměrů (otevřený bug Warszawa 9,15 zł z 2026-05-26):
+   `getSaneRealStations/getSaneRealPrices` v `lib/data.ts` (reálné ceny v pásmu 85–125 %
+   národního průměru) použito v `miasto`, `wojewodztwo`, `autostrada`, `ceny-paliw-dzisiaj`,
+   `llms-full.txt`. Zároveň se tam započítávají i komunitní ceny (dřív jen `cenapaliw.pl`).
+5. `/historia-cen/` graf zvládá krátkou řadu (popisky osy, body u < 20 záznamů).
+6. Supabase: kód čte i `SUPABASE_SERVICE_ROLE_KEY` (název z Vercel Marketplace integrace).
+
+### Zbývá (musí udělat uživatel)
+- Supabase projekt + SQL tabulka + env (Vercel) + secrets (GitHub) dle `SUPABASE_SETUP.md`.
+  Bez toho komunitní hlášení nepřežijí cold start na Vercelu.
+- GSC / Bing Webmaster dle `NEXT_STEPS_GSC.md` (pokud ještě není hotové).
+
+---
+
+## Historie: 2026-05-06 — BUILD ✅ + SCRAPER ✅ + DATA ✅
 
 ---
 
